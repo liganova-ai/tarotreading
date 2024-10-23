@@ -1,17 +1,17 @@
+/* Default styles (desktop) */
 .container {
   position: relative;
   height: 100vh;
   width: 100vw;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: space-between; /* Distribute space evenly */
   font-family: var(--font-sabon); /* Default font */
   overflow: hidden;
 }
 
 .background {
-  position: absolute;
+  position: fixed; /* Keep fixed background */
   top: 0;
   left: 0;
   right: 0;
@@ -23,6 +23,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center; /* Center the image */
 }
 
 .heading {
@@ -32,24 +33,24 @@
   color: white;
   font-size: 1.5rem;
   text-align: center;
-  margin-top: 120px; 
+  margin-top: 118px; /* Fixed margin from the top */
 }
 
 .footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-
+  justify-content: flex-end; /* Push footer items to the bottom */
+  margin-bottom: 30px; /* Space from the bottom */
 }
 
 .smallText {
   font-family: var(--font-sabon); 
   font-weight: 300;
   font-size: 1.5rem;
-  margin: 50px 78px;
   color: white;
   text-align: center;
-  margin-bottom: 0px; 
+  padding-bottom: 20px; /* Space above the button */
 }
 
 .startButton {
@@ -58,10 +59,34 @@
   background-color: #D9D9D9;
   border-radius: 25px;
   color: black;
-  padding: 14px 84px;
-  margin-top: 50px;
-  margin-bottom: 50px;
+  padding: 14px 50px;
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+/* Mobile responsiveness */
+@media only screen and (max-width: 600px) {
+  .container {
+    height: 100vh; /* Keep full height */
+    width: 100%;
+    padding: 20px;
+  }
+
+  .heading {
+    font-size: 1.2rem; /* Smaller font for mobile */
+    letter-spacing: 5px;
+    margin-top: 100px; /* Adjust margin for smaller screens */
+  }
+
+  .smallText {
+    font-size: 1.2rem; /* Smaller text for mobile */
+    margin: 10px 20px; /* Adjusted margins for mobile */
+  }
+
+  .startButton {
+    padding: 12px 40px; /* Smaller padding */
+    font-size: 1rem; /* Smaller font for the button */
+    margin-bottom: 30px; /* Maintain distance from bottom */
+  }
 }
