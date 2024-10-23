@@ -33,7 +33,7 @@
   color: white;
   font-size: 1.5rem;
   text-align: center;
-  margin-top: 118px; /* Fixed margin from the top */
+  margin-top: 10%; 
 }
 
 .footer {
@@ -76,7 +76,7 @@
   .heading {
     font-size: 1.2rem; /* Smaller font for mobile */
     letter-spacing: 5px;
-    margin-top: 100px; /* Adjust margin for smaller screens */
+    margin-top: 15%; 
   }
 
   .smallText {
