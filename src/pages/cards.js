@@ -69,9 +69,6 @@ export default function CardsPage() {
         <img src="/questionBackground.png" alt="Background" className={styles.backgroundImage} />
       </div>
 
-      <div className={styles.overlayImage}>
-        <img src="/whiteblur.png" alt="Overlay" className={styles.overlayPng} />
-      </div>
 
       <header className={styles.header}>
         <img src="/backbutton.png" alt="Back Button" className={styles.headerButton} onClick={() => router.back()} />

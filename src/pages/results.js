@@ -176,6 +176,8 @@ export default function ResultsPage() {
   const [error, setError] = useState('');
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const isFetchingRef = useRef(false);
+
+  const modalRef = useRef(null);
   
   const parsedCards = cards ? JSON.parse(cards) : [];
 
@@ -220,6 +222,24 @@ export default function ResultsPage() {
 
     fetchPrediction();
   }, [router.isReady, question, cards, adjectives]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        closeModal(); // Close modal if clicked outside
+      }
+    };
+  
+    if (selectedCardIndex !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+  
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedCardIndex]);
 
   const openModal = (index) => {
     setSelectedCardIndex(index);
@@ -331,16 +351,20 @@ export default function ResultsPage() {
                 <h1 className={styles.topheading}>What each card means</h1>
               </div>
               <div className={styles.modalContent}>
-            <div className={styles.modalCard}>
+            <div className={styles.modalCard} ref={modalRef}>
               <img
                 src={`/cards/Card ${parsedCards[selectedCardIndex]}.jpg`}
                 alt={`Card ${parsedCards[selectedCardIndex]}`}
                 className={styles.largeCardImage}
               />
+            </div>
+
+            
               <p className={styles.cardDescription}>
                 {cardDescriptions[parsedCards[selectedCardIndex]]}
               </p>
-            </div>
+              
+            
           </div>
 
 
