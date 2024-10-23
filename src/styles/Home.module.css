@@ -1,14 +1,14 @@
-/* Default styles (desktop) */
 .container {
   position: relative;
-  height: 100vh;
+  height: calc(100vh - 15%);
   width: 100vw;
   display: flex;
   flex-direction: column;
   justify-content: space-between; /* Distribute space evenly */
-  font-family: var(--font-sabon); /* Default font */
+  font-family: var(--font-sabon);
   overflow: hidden;
 }
+
 
 .background {
   position: fixed; /* Keep fixed background */
