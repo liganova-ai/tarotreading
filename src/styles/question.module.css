@@ -1,6 +1,6 @@
 .container {
   position: relative;
-  height: 100vh;
+  min-height: 100vh; /* Ensure minimum height of viewport */
   width: 100vw;
   display: flex;
   flex-direction: column;
@@ -27,16 +27,16 @@
 .header {
   position: relative;
   width: 100%;
-  margin-top: 45px; 
-  text-align: center; /* Center aligns the header text */
+  margin-top: 10%; /* Use percentage for better responsiveness */
+  text-align: center;
 }
 
 .headerButton {
   position: absolute;
-  left: 30px; /* 30px from the left border */
-  width: 35px; /* Set size of the button image */
+  left: 7%; /* 5% from the left border */
+  width: 35px; /* Fixed size of the button image */
   height: auto; /* Maintain aspect ratio */
-  top: -11px;
+  top: -8px;
 }
 
 .headerheading {
@@ -53,26 +53,23 @@
   font-family: var(--font-sabon);
   font-weight: 500;
   font-style: italic;
-  color: #e1e1e1; 
-  font-size: 1rem;
-  padding: 16px 20px;
+  color: #e1e1e1;
+  font-size: 4vw; /* Responsive font size */
+  padding: 5% 5%; /* Use percentage for padding */
   border-radius: 20px;
-  border: 1px solid #ccc;  
+  border: 1px solid #ccc;
   background-color: transparent;
   width: 70%; /* Set width to 70% */
-  height: 100px; 
-  box-sizing: border-box; 
-  line-height: 1.2; 
+  height: 10vh; /* Use vh for height */
+  box-sizing: border-box;
+  line-height: 1.2;
   vertical-align: top;
-  margin: 170px 0;
-
+  margin: 23vh 0; /* Responsive margin */
 }
 
 .input::placeholder {
-  color: #909090; 
+  color: #909090;
 }
-
-
 
 .submitButton {
   font-family: var(--font-sabon);
@@ -80,38 +77,53 @@
   background-color: #D9D9D9;
   border-radius: 25px;
   color: black;
-  padding: 14px 72px;;
-  margin-bottom: 20px;
-  margin-top: 94px;
+  padding: 14px 72px;; 
+  margin: 2vh 0; /* Responsive margin */
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.2rem; /* Responsive font size */
   cursor: pointer;
 }
 
-
 .topSection {
   text-align: center;
-  position: relative; 
-  top: -20px;
+  position: relative;
+  margin: 5vh 0; /* Responsive margin */
 }
 
 .topheading {
   font-family: var(--font-luxury);
   font-weight: 200;
-  font-size: 2.5rem;
-  margin-top: 80px;
+  font-size: 5vw; /* Responsive font size */
+  margin-top: 5%; /* Adjusted margin */
 }
 
 .explanation {
   font-family: var(--font-sabon);
   font-weight: 500;
   font-style: italic;
-  font-size: 0.9rem;
-  margin: 10px 90px;
+  font-size: 3vw; /* Responsive font size */
+  margin: 2% 5%; /* Responsive margins */
   color: #fff;
-
 }
 
 
+@media (max-width: 600px) {
 
 
+  .topheading {
+    font-size: 6vw; /* Adjusted for mobile */
+  }
+
+  .explanation {
+    font-size: 4vw; /* Adjusted for mobile */
+  }
+
+  .input {
+    font-size: 4vw; /* Smaller font size for input */
+    height: auto; /* Adjust height */
+  }
+
+  .submitButton {
+    font-size: 5vw; /* Smaller font size for button */
+  }
+}
