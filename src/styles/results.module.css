@@ -1,0 +1,341 @@
+.container {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-sabon);
+  overflow: hidden;
+}
+
+.background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
+
+.backgroundImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.header {
+  position: relative;
+  width: 100%;
+  margin-top: 45px; 
+  text-align: center; /* Center aligns the header text */
+}
+
+.headerButton {
+  position: absolute;
+  left: 30px; /* 30px from the left border */
+  width: 35px; /* Set size of the button image */
+  height: auto; /* Maintain aspect ratio */
+  top: -11px;
+}
+
+.headerheading {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  letter-spacing: 5px;
+  color: white;
+  font-size: 0.9rem;
+  display: inline-block; /* Ensure the text stays centered */
+  margin-left: 10px;
+}
+
+.topSection {
+  text-align: center;
+  margin: 20px 40px; /* This can be adjusted to control spacing between heading and card */
+  padding-bottom: 20px; /* Add padding below the heading to create space between the card */
+}
+
+.topheading {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  font-size: 2.5rem;
+  margin-top: 53px;
+}
+
+.cardsSection {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Reduced gap for smaller cards */
+  margin: 20px;
+  position: relative; /* To allow adjusting the middle card */
+}
+
+
+
+.cardImage {
+  width: 100px; /* Smaller card size */
+  height: auto;
+  border: 1px solid white; /* White border around card images */
+  border-radius: 4px;
+}
+
+
+
+.cardsSection .cardContainer:nth-child(2) {
+  position: relative;
+  top: -20px; /* Move the middle card slightly above */
+}
+
+
+.predictionSection {
+  margin: 20px 40px; 
+  text-align: center;
+}
+
+.predictionText {
+  font-family: var(--font-sabon);
+  font-weight: 500;
+  font-style: italic;
+  font-size: 1rem; 
+  color: white;
+  line-height: 1.5;
+}
+
+.returnButton {
+  font-family: var(--font-sabon);
+  font-weight: 800;
+  background-color: #D9D9D9;
+  border-radius: 25px;
+  color: black;
+  padding: 14px 72px;
+  margin-bottom: 50px;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+
+
+.loadingSection {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; 
+}
+
+/* Circle container */
+.loadingCircles {
+  display: flex;
+  gap: 20px; /* Space between the circles */
+}
+
+/* Individual circle styling */
+.circle {
+  width: 24px;
+  height: 24px;
+  border: 1px solid white; 
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+
+.loadingImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0; 
+}
+
+/* Animate circles one after another, with slower animation timing */
+@keyframes fillLoading {
+  0%, 100% {
+    opacity: 0;
+    border-color: white; /* Show the white border when empty */
+  }
+  25%, 75% {
+    opacity: 1;
+    border-color: transparent; /* Hide the border when filled */
+  }
+}
+
+/* Circle animations */
+.circle:nth-child(1) .loadingImg {
+  animation: fillLoading 2s infinite; /* Slowed down */
+}
+
+.circle:nth-child(2) .loadingImg {
+  animation: fillLoading 2s infinite 0.4s; /* Slowed down */
+}
+
+.circle:nth-child(3) .loadingImg {
+  animation: fillLoading 2s infinite 0.8s; /* Slowed down */
+}
+
+.circle:nth-child(4) .loadingImg {
+  animation: fillLoading 2s infinite 1.2s; /* Slowed down */
+}
+
+.circle:nth-child(5) .loadingImg {
+  animation: fillLoading 2s infinite 1.6s; /* Slowed down */
+}
+
+/* Loading text styling */
+.loadingText {
+  font-size: 18px;
+  color: white;
+  text-align: center;
+  margin: 20px 20px;
+}
+
+
+
+.largeCardImage {
+  width: 220px; /* Larger card size */
+  height: auto;
+  padding-top: 20px;
+}
+
+
+
+.cardDescription {
+  font-family: var(--font-sabon);
+  font-size: 1.2rem;
+  font-style: italic;
+  color: white;
+  margin-top: 60px;
+  text-align: center;
+  max-width: 80%;
+}
+
+
+.modal .background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
+
+.modal .backgroundImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.modal .header {
+  position: relative;
+  width: 100%;
+  margin-top: 100px; 
+  text-align: center; /* Center aligns the header text */
+}
+
+.modal .headerButton {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  color: white;
+  font-size: 0.8rem;
+  display: inline-block; /* Ensure the text stays centered */
+  margin-left: 0px;
+}
+
+.modal .headerheading {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  letter-spacing: 5px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.modal .topheading {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  font-size: 2.5rem;
+  position: relative;
+  top: 32px; 
+}
+
+.modalContent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* Make sure it takes up the full height of the modal */
+  position: relative; /* This allows for positioning the arrows inside */
+}
+
+.modalCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 10; 
+  padding-bottom: 180px;
+}
+
+.arrowButton {
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  position: absolute; /* Position relative to .modalCard */
+  top:32%; /* Vertically center the arrows */
+  transform: translateY(-50%); /* Ensure vertical centering */
+}
+
+.arrowButton:first-child {
+  left: 50px; /* Position the left arrow on the left side of the card */
+}
+
+.arrowButton:last-child {
+  right: 50px; /* Position the right arrow on the right side of the card */
+}
+
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Ensure modal content is centered vertically */
+  align-items: center;
+}
+
+.returnButtonModal {
+    position: absolute; /* Use absolute positioning relative to the modal */
+    bottom: 50px; /* Slightly above the bottom of the modal */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Shift left by 50% of its width for perfect centering */
+    background-color: #D9D9D9;
+    border-radius: 25px;
+    color: black;
+    padding: 14px 72px;
+    border: none;
+    font-family: var(--font-sabon);
+    font-weight: 800;
+    font-size: 1.2rem;
+  }
+
+
+
+
+
+
+
+
+
+
+
