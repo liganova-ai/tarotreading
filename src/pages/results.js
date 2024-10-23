@@ -174,15 +174,10 @@ export default function ResultsPage() {
   const [prediction, setPrediction] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [parsedCards, setParsedCards] = useState([]);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const isFetchingRef = useRef(false);
   
-  useEffect(() => {
-    if (cards) {
-      setParsedCards(JSON.parse(cards)); // Parse once and store
-    }
-  }, [cards]);
+  const parsedCards = cards ? JSON.parse(cards) : [];
 
   console.log("parsed carrrrds:", parsedCards)
   console.log("selectedCardIndex:", selectedCardIndex)
