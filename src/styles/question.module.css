@@ -27,16 +27,16 @@
 .header {
   position: relative;
   width: 100%;
-  margin-top: 10%; /* Use percentage for better responsiveness */
-  text-align: center;
+  margin-top: 45px; 
+  text-align: center; /* Center aligns the header text */
 }
 
 .headerButton {
   position: absolute;
-  left: 7%; /* 5% from the left border */
-  width: 35px; /* Fixed size of the button image */
+  left: 30px; /* 30px from the left border */
+  width: 35px; /* Set size of the button image */
   height: auto; /* Maintain aspect ratio */
-  top: -8px;
+  top: -11px;
 }
 
 .headerheading {
@@ -48,23 +48,22 @@
   display: inline-block; /* Ensure the text stays centered */
   margin-left: 10px;
 }
-
 .input {
   font-family: var(--font-sabon);
   font-weight: 500;
   font-style: italic;
   color: #e1e1e1;
   font-size: 4vw; /* Responsive font size */
-  padding: 5% 5%; /* Use percentage for padding */
+  padding: 4% 4%; /* Use percentage for padding */
   border-radius: 20px;
   border: 1px solid #ccc;
   background-color: transparent;
-  width: 70%; /* Set width to 70% */
-  height: 10vh; /* Use vh for height */
+  width: 70%; 
+  height: 10vh; 
   box-sizing: border-box;
   line-height: 1.2;
   vertical-align: top;
-  margin: 23vh 0; /* Responsive margin */
+  margin: 21vh 0; 
 }
 
 .input::placeholder {
@@ -87,43 +86,25 @@
 .topSection {
   text-align: center;
   position: relative;
-  margin: 5vh 0; /* Responsive margin */
+  margin: 4vh 0; /* Responsive margin */
 }
 
 .topheading {
   font-family: var(--font-luxury);
   font-weight: 200;
-  font-size: 5vw; /* Responsive font size */
-  margin-top: 5%; /* Adjusted margin */
+  font-size: 2.5rem;
+  margin-top: 10px;
 }
 
 .explanation {
   font-family: var(--font-sabon);
   font-weight: 500;
   font-style: italic;
-  font-size: 3vw; /* Responsive font size */
-  margin: 2% 5%; /* Responsive margins */
+  font-size: 0.9rem;
+  margin: 10px 90px;
   color: #fff;
+
 }
 
 
-@media (max-width: 600px) {
 
-
-  .topheading {
-    font-size: 6vw; /* Adjusted for mobile */
-  }
-
-  .explanation {
-    font-size: 4vw; /* Adjusted for mobile */
-  }
-
-  .input {
-    font-size: 4vw; /* Smaller font size for input */
-    height: auto; /* Adjust height */
-  }
-
-  .submitButton {
-    font-size: 5vw; /* Smaller font size for button */
-  }
-}

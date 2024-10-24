@@ -72,6 +72,7 @@
   overflow-x: scroll; /* Allow horizontal scroll */
   scroll-snap-type: x mandatory; /* Snap cards into place */
   margin-top: 0px;
+  padding-bottom: 10px;
 }
 
 
@@ -111,7 +112,7 @@
 }
 
 .selected .rectangle {
-  background-color: #B7B7B7; /* Turn white when selected */
+  background-color: #ffffff; /* Turn white when selected */
 }
 
 .swipeText {
