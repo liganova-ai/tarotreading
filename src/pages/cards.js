@@ -77,7 +77,7 @@ export default function CardsPage() {
 
         <div className={styles.headlineSection}>
           <h2 className={styles.bigHeadline}>The future is in your hands</h2>
-          <p className={styles.subHeading}>Select three cards from the deck</p>
+          <p className={styles.subHeading}>Choose cards from the deck</p>
         </div>
 
 
@@ -110,7 +110,7 @@ export default function CardsPage() {
 
       <div className={styles.navigationArrows}>
     
-        <p className={styles.swipeText}>Swipe & Click to Select</p>
+        <p className={styles.swipeText}>Swipe & Select 3 cards</p>
       </div>
       <div className={styles.buttonContainer}>
 
