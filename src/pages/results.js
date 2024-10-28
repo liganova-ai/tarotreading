@@ -324,7 +324,12 @@ export default function ResultsPage() {
             </div>
 
           <div className={styles.predictionSection}>
-            <p className={styles.predictionText}>{prediction}</p>
+            <Link href="/">
+            <img src="/SpeakButton.png" alt="Button" className={styles.speakButton} />
+            </Link>
+            <div className={styles.predictionTextContainer}>
+              <p className={styles.predictionText}>{prediction}</p>
+            </div>
           </div>
 
           <Link href="/">

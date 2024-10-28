@@ -68,6 +68,7 @@
   justify-content: center;
   gap: 10px; /* Reduced gap for smaller cards */
   margin: 20px;
+  margin-bottom: 0px;
   position: relative; /* To allow adjusting the middle card */
 }
 
@@ -89,17 +90,37 @@
 
 
 .predictionSection {
-  margin: 20px 40px; 
+  margin: 25px 40px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.predictionTextContainer {
+  height: 250px; 
+  overflow-y: auto; 
+  width: 80%; 
+  padding: 5px; 
+  box-sizing: border-box; 
 }
 
 .predictionText {
   font-family: var(--font-sabon);
   font-weight: 500;
   font-style: italic;
-  font-size: 1rem; 
+  font-size: 1rem;
   color: white;
   line-height: 1.5;
+}
+
+.speakButton {
+  width: 20px;
+  height: auto;
+  padding-bottom: 0px;
+  top: -10px;
+  position: relative;
 }
 
 .returnButton {
@@ -339,3 +360,5 @@
     bottom: 0;
     z-index: -1;
   }
+
+
