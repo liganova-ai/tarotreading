@@ -174,6 +174,7 @@ export default function ResultsPage() {
   const [prediction, setPrediction] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const audioRef = useRef(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const isFetchingRef = useRef(false);
 
@@ -183,6 +184,27 @@ export default function ResultsPage() {
 
   console.log("parsed carrrrds:", parsedCards)
   console.log("selectedCardIndex:", selectedCardIndex)
+
+  const handleSpeakClick = async () => {
+    try {
+        const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: prediction }),
+        });
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        if (audioRef.current) {
+          audioRef.current.src = '/speech.mp3';
+          await audioRef.current.load(); // Reload to ensure latest file
+          audioRef.current.play();
+        }
+    } catch (err) {
+        console.error('Error fetching TTS:', err);
+    }
+};
+  
   
   useEffect(() => {
     if (!router.isReady || !question || !cards || !adjectives) {
@@ -324,9 +346,10 @@ export default function ResultsPage() {
             </div>
 
           <div className={styles.predictionSection}>
-            <Link href="/">
-            <img src="/SpeakButton.png" alt="Button" className={styles.speakButton} />
-            </Link>
+            <button onClick={handleSpeakClick} className={styles.button}>
+              <img src="/SpeakButton.png" className={styles.speakButton} />
+            </button>
+            <audio ref={audioRef} src="/speech.mp3"/>
             <div className={styles.predictionTextContainer}>
               <p className={styles.predictionText}>{prediction}</p>
             </div>

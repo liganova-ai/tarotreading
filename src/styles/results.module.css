@@ -116,9 +116,10 @@
 }
 
 .speakButton {
+  display: block;
   width: 20px;
   height: auto;
-  padding-bottom: 0px;
+  padding-bottom: 0;
   top: -10px;
   position: relative;
 }
@@ -361,4 +362,11 @@
     z-index: -1;
   }
 
+
+  .button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
 
