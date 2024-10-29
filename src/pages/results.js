@@ -186,18 +186,24 @@ export default function ResultsPage() {
   console.log("parsed cards:", parsedCards)
   console.log("selectedCardIndex:", selectedCardIndex)
 
-  const handleSpeakClick = async () => {
+  
+
+const handleSpeakClick = async () => {
     try {
         const response = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: prediction }),
         });
+        
+        if (!response.ok) throw new Error('Audio generation failed');
+
+        // Convert response to a blob and create a URL
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
 
         if (audioRef.current) {
-          audioRef.current.src = '/speech.mp3';
+          audioRef.current.src = audioUrl;  // Set to blob URL
           await audioRef.current.load(); 
           audioRef.current.play();
         }
