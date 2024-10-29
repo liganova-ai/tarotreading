@@ -172,6 +172,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const { question, cards, adjectives } = router.query;
   const [prediction, setPrediction] = useState('');
+  const [paragraphs, setParagraphs] = useState([]); // to store prediction as paragraphs
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const audioRef = useRef(null);
@@ -182,7 +183,7 @@ export default function ResultsPage() {
   
   const parsedCards = cards ? JSON.parse(cards) : [];
 
-  console.log("parsed carrrrds:", parsedCards)
+  console.log("parsed cards:", parsedCards)
   console.log("selectedCardIndex:", selectedCardIndex)
 
   const handleSpeakClick = async () => {
@@ -197,7 +198,7 @@ export default function ResultsPage() {
 
         if (audioRef.current) {
           audioRef.current.src = '/speech.mp3';
-          await audioRef.current.load(); // Reload to ensure latest file
+          await audioRef.current.load(); 
           audioRef.current.play();
         }
     } catch (err) {
@@ -232,6 +233,7 @@ export default function ResultsPage() {
         });
         setTimeout(() => {
           setPrediction(response.data.prediction);
+          setParagraphs(response.data.prediction.split('\n'));
           setLoading(false);
         }, 5000);
       } catch (err) {
@@ -351,8 +353,10 @@ export default function ResultsPage() {
             </button>
             <audio ref={audioRef} src="/speech.mp3"/>
             <div className={styles.predictionTextContainer}>
-              <p className={styles.predictionText}>{prediction}</p>
-            </div>
+            {paragraphs.map((paragraph, index) => (
+              <p key={index} className={styles.predictionText}>{paragraph}</p>
+            ))}
+          </div>
           </div>
 
           <Link href="/">
