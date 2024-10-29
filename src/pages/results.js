@@ -192,7 +192,6 @@ export default function ResultsPage() {
   
 
   const handleSpeakClick = async () => {
-    // If audio is already fetched, toggle between play and pause
     if (isAudioFetched && audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -203,35 +202,35 @@ export default function ResultsPage() {
       }
       return;
     }
-
-    // Fetch audio only when not fetched previously
+  
+    // Fetch new audio if not already fetched or after modal closes
     try {
-      setIsFetchingAudio(true);  // Show loading icon while fetching
+      setIsFetchingAudio(true);
       const response = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: prediction }),
       });
-
+  
       if (!response.ok) throw new Error('Audio generation failed');
-
+  
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-
+  
       if (audioRef.current) {
         audioRef.current.src = audioUrl;
-        await audioRef.current.load();
-        audioRef.current.play();
-        setIsAudioFetched(true);  // Set audio as fetched
-        setIsPlaying(true);
+        audioRef.current.oncanplaythrough = () => {
+          audioRef.current.play();
+          setIsAudioFetched(true);
+          setIsPlaying(true);
+          setIsFetchingAudio(false);
+        };
+        audioRef.current.onpause = () => setIsPlaying(false);
+        audioRef.current.onended = () => setIsPlaying(false);
       }
-
-      audioRef.current.onplaying = () => setIsFetchingAudio(false); // Switch to pause button when playing
-      audioRef.current.onpause = () => setIsPlaying(false);         // Reset to play button when paused
-      audioRef.current.onended = () => setIsPlaying(false);         // Reset to play button when audio ends
     } catch (err) {
       console.error('Error fetching TTS:', err);
-      setIsFetchingAudio(false); // Reset to initial button if error occurs
+      setIsFetchingAudio(false);
     }
   };
   
@@ -298,9 +297,16 @@ export default function ResultsPage() {
     setSelectedCardIndex(index);
   };
 
-  // Close modal
   const closeModal = () => {
     setSelectedCardIndex(null);
+  
+    // Reset audio state to show the SpeakButton in initial state
+    setIsAudioFetched(false);
+    setIsPlaying(false);
+  
+    if (audioRef.current) {
+      audioRef.current.src = ''; // Clear current audio source
+    }
   };
 
   // Navigate between cards (ensure cycling)
@@ -389,7 +395,7 @@ export default function ResultsPage() {
               alt="Speak Button"
             />
             </button>
-            <audio ref={audioRef} src="/speech.mp3"/>
+            <audio ref={audioRef}/>
             <div className={styles.predictionTextContainer}>
             {paragraphs.map((paragraph, index) => (
               <p key={index} className={styles.predictionText}>{paragraph}</p>
