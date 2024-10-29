@@ -76,7 +76,7 @@ export default function Prequestion() {
         <Link href="/disclaimer">
           <img src="/backButton.png" alt="Button" className={styles.headerButton} />
         </Link>
-        <h1 className={styles.headerheading}>LIGAFUTURE</h1>
+        <h1 className={styles.headerheading}>LIGAORACLE</h1>
 
         
 

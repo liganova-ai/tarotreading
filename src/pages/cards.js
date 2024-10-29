@@ -72,7 +72,7 @@ export default function CardsPage() {
 
       <header className={styles.header}>
         <img src="/backbutton.png" alt="Back Button" className={styles.headerButton} onClick={() => router.back()} />
-        <h1 className={styles.headerheading}>LIGAFUTURE</h1>
+        <h1 className={styles.headerheading}>LIGAORACLE</h1>
       </header>
 
         <div className={styles.headlineSection}>

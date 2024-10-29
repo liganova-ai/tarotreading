@@ -7,7 +7,7 @@ export default function Home() {
       <div className={styles.background}>
         <img src="/indexBackground.png" alt="Background" className={styles.backgroundImage} />
       </div>
-      <h1 className={styles.heading}>LIGAFUTURE</h1>
+      <h1 className={styles.heading}>LIGAORACLE</h1>
       <div className={styles.footer}>
         <p className={styles.smallText}>Look into the future and discover what awaits</p>
         <Link href="/disclaimer">
