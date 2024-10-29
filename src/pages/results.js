@@ -395,7 +395,7 @@ export default function ResultsPage() {
               alt="Speak Button"
             />
             </button>
-            <audio ref={audioRef}/>
+            <audio ref={audioRef} src="/speech.mp3"/>
             <div className={styles.predictionTextContainer}>
             {paragraphs.map((paragraph, index) => (
               <p key={index} className={styles.predictionText}>{paragraph}</p>
