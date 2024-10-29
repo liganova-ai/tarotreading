@@ -73,25 +73,33 @@
   scroll-snap-type: x mandatory; /* Snap cards into place */
   margin-top: 0px;
   padding-bottom: 10px;
+  padding-top: 20px;
 }
 
 
 .carousel {
   display: flex;
-  gap: 10px; /* Adjust gap for spacing between cards */
+  gap: 10px; 
 }
 
 .cardContainer {
   position: relative;
-  width: 100px; /* Adjust for 5 cards visible */
+  width: 100px;
   height: 150px;
   display: flex;
-  justify-content:center;
+  justify-content: center;
   align-items: center;
-  border: 1px solid white; /* White outline */
+  border: 1px solid white;
   border-radius: 5px;
-  transition: transform 0.3s ease;
-  padding: 10px; /* Padding for the card */
+  transition: transform 0.3s ease, margin-bottom 0.3s ease;
+  padding: 10px;
+}
+
+.imageWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* Fill the height of cardContainer */
 }
 
 .cardImage {
@@ -107,12 +115,19 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1); /* Transparent by default */
+  background-color: rgba(255, 255, 255, 0.1);
   transition: background-color 0.3s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .selected .rectangle {
   background-color: #ffffff; /* Turn white when selected */
+}
+
+.selected {
+  transform: translateY(-10px); /* Move card up slightly */
 }
 
 .swipeText {
@@ -205,7 +220,7 @@
 
 .headlineSection {
   text-align: center;
-  margin-top: -80px;
+  margin-top: -60px;
 }
 
 .bigHeadline {

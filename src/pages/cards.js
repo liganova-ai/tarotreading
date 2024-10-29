@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import styles from '../styles/cards.module.css';
 
 // Generate card numbers 1 through 78
-const originalCards = Array.from({ length: 78 }, (_, index) => index + 2);
+const originalCards = Array.from({ length: 77 }, (_, index) => index + 2);
 
 // Utility function to shuffle the array
 const shuffleArray = (array) => {
@@ -97,12 +97,15 @@ export default function CardsPage() {
               className={`${styles.cardContainer} ${selectedCards.includes(cardNumber) ? styles.selected : ''}`}
               onClick={() => handleCardClick(cardNumber)}
             >
-              <div className={styles.rectangle}></div>
-              <img
-                src="/backcard.jpg"
-                alt={`Card ${cardNumber}`}
-                className={styles.cardImage}
-              />
+              <div className={styles.rectangle}>
+                <div className={styles.imageWrapper}>
+                  <img
+                    src="/backcard.jpg"
+                    alt={`Card ${cardNumber}`}
+                    className={styles.cardImage}
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>
