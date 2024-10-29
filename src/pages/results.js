@@ -172,7 +172,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const { question, cards, adjectives } = router.query;
   const [prediction, setPrediction] = useState('');
-  const [paragraphs, setParagraphs] = useState([]); // to store prediction as paragraphs
+  const [paragraphs, setParagraphs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isFetchingAudio, setIsFetchingAudio] = useState(false);
@@ -183,13 +183,7 @@ export default function ResultsPage() {
   const isFetchingRef = useRef(false);
 
   const modalRef = useRef(null);
-  
   const parsedCards = cards ? JSON.parse(cards) : [];
-
-  console.log("parsed cards:", parsedCards)
-  console.log("selectedCardIndex:", selectedCardIndex)
-
-  
 
   const handleSpeakClick = async () => {
     if (isAudioFetched && audioRef.current) {
@@ -202,8 +196,7 @@ export default function ResultsPage() {
       }
       return;
     }
-  
-    // Fetch new audio if not already fetched or after modal closes
+
     try {
       setIsFetchingAudio(true);
       const response = await fetch('/api/tts', {
@@ -211,23 +204,27 @@ export default function ResultsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: prediction }),
       });
-  
+
       if (!response.ok) throw new Error('Audio generation failed');
-  
+
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-  
+
       if (audioRef.current) {
         audioRef.current.src = audioUrl;
-        audioRef.current.oncanplaythrough = () => {
-          audioRef.current.play();
-          setIsAudioFetched(true);
-          setIsPlaying(true);
-          setIsFetchingAudio(false);
-        };
-        audioRef.current.onpause = () => setIsPlaying(false);
-        audioRef.current.onended = () => setIsPlaying(false);
+        audioRef.current.load();
+        audioRef.current.play();
+        setIsAudioFetched(true);
+        setIsPlaying(true);
       }
+
+      audioRef.current.onplaying = () => {
+        setIsFetchingAudio(false);
+        setIsPlaying(true);
+      };
+      audioRef.current.onpause = () => setIsPlaying(false);
+      audioRef.current.onended = () => setIsPlaying(false);
+
     } catch (err) {
       console.error('Error fetching TTS:', err);
       setIsFetchingAudio(false);
@@ -395,7 +392,7 @@ export default function ResultsPage() {
               alt="Speak Button"
             />
             </button>
-            <audio ref={audioRef} src="/speech.mp3"/>
+            <audio ref={audioRef}/>
             <div className={styles.predictionTextContainer}>
             {paragraphs.map((paragraph, index) => (
               <p key={index} className={styles.predictionText}>{paragraph}</p>
