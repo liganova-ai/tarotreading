@@ -175,6 +175,9 @@ export default function ResultsPage() {
   const [paragraphs, setParagraphs] = useState([]); // to store prediction as paragraphs
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isFetchingAudio, setIsFetchingAudio] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioFetched, setIsAudioFetched] = useState(false);
   const audioRef = useRef(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const isFetchingRef = useRef(false);
@@ -188,29 +191,49 @@ export default function ResultsPage() {
 
   
 
-const handleSpeakClick = async () => {
-    try {
-        const response = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: prediction }),
-        });
-        
-        if (!response.ok) throw new Error('Audio generation failed');
-
-        // Convert response to a blob and create a URL
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl;  // Set to blob URL
-          await audioRef.current.load(); 
-          audioRef.current.play();
-        }
-    } catch (err) {
-        console.error('Error fetching TTS:', err);
+  const handleSpeakClick = async () => {
+    // If audio is already fetched, toggle between play and pause
+    if (isAudioFetched && audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+      return;
     }
-};
+
+    // Fetch audio only when not fetched previously
+    try {
+      setIsFetchingAudio(true);  // Show loading icon while fetching
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: prediction }),
+      });
+
+      if (!response.ok) throw new Error('Audio generation failed');
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        await audioRef.current.load();
+        audioRef.current.play();
+        setIsAudioFetched(true);  // Set audio as fetched
+        setIsPlaying(true);
+      }
+
+      audioRef.current.onplaying = () => setIsFetchingAudio(false); // Switch to pause button when playing
+      audioRef.current.onpause = () => setIsPlaying(false);         // Reset to play button when paused
+      audioRef.current.onended = () => setIsPlaying(false);         // Reset to play button when audio ends
+    } catch (err) {
+      console.error('Error fetching TTS:', err);
+      setIsFetchingAudio(false); // Reset to initial button if error occurs
+    }
+  };
   
   
   useEffect(() => {
@@ -355,7 +378,16 @@ const handleSpeakClick = async () => {
 
           <div className={styles.predictionSection}>
             <button onClick={handleSpeakClick} className={styles.button}>
-              <img src="/SpeakButton.png" className={styles.speakButton} />
+            <img
+              src={
+                isFetchingAudio ? "/bouncing-circles.svg" :
+                isPlaying ? "/PauseButton.png" :
+                isAudioFetched ? "/PlayButton.png" :
+                "/SpeakButton.png"
+              }
+              className={styles.speakButton}
+              alt="Speak Button"
+            />
             </button>
             <audio ref={audioRef} src="/speech.mp3"/>
             <div className={styles.predictionTextContainer}>
