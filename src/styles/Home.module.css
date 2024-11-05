@@ -90,3 +90,113 @@
     margin-bottom: 30px; /* Maintain distance from bottom */
   }
 }
+
+
+
+.loadingSection {
+  display: flex; .container {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-sabon);
+  overflow-x: hidden;
+}  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; 
+}
+
+/* Circle container */
+.loadingCircles {
+  display: flex;
+  gap: 20px; /* Space between the circles */
+}
+
+/* Individual circle styling */
+.circle {
+  width: 24px;
+  height: 24px;
+  border: 1px solid white; 
+  border-radius: 50%;
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+
+.loadingImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0; 
+}
+
+/* Animate circles one after another, with slower animation timing */
+@keyframes fillLoading {
+  0%, 100% {
+    opacity: 0;
+    border-color: white; /* Show the white border when empty */
+  }
+  25%, 75% {
+    opacity: 1;
+    border-color: transparent; /* Hide the border when filled */
+  }
+}
+
+/* Circle animations */
+.circle:nth-child(1) .loadingImg {
+  animation: fillLoading 2s infinite; /* Slowed down */
+}
+
+.circle:nth-child(2) .loadingImg {
+  animation: fillLoading 2s infinite 0.4s; /* Slowed down */
+}
+
+.circle:nth-child(3) .loadingImg {
+  animation: fillLoading 2s infinite 0.8s; /* Slowed down */
+}
+
+.circle:nth-child(4) .loadingImg {
+  animation: fillLoading 2s infinite 1.2s; /* Slowed down */
+}
+
+.circle:nth-child(5) .loadingImg {
+  animation: fillLoading 2s infinite 1.6s; /* Slowed down */
+}
+
+/* Loading text styling */
+.loadingText {
+  font-size: 18px;
+  color: white;
+  text-align: center;
+  margin: 20px 20px;
+} 
+
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+.backgroundImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+} 
+
+.header {
+  position: relative;
+  width: 100%;
+  margin-top: 45px; 
+  text-align: center; /* Center aligns the header text */
+}
