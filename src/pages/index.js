@@ -43,7 +43,7 @@ export default function Home() {
     <div className={styles.container}>
       {isLoading && (
         <div className={styles.loadingOverlay}>
-          <img src="/grey-loading.svg" alt="Loading" className={styles.loadingImage} />
+          <img src="/bouncing-circles.svg" alt="Loading" className={styles.loadingImage} />
         </div>
       )}
       <div className={styles.background}>
