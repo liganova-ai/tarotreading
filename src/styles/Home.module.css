@@ -210,3 +210,11 @@
   display: inline-block; /* Ensure the text stays centered */
   margin-left: 10px;
 }
+
+.headerButton {
+  position: absolute;
+  left: 30px; /* 30px from the left border */
+  width: 35px; /* Set size of the button image */
+  height: auto; /* Maintain aspect ratio */
+  top: -11px;
+}
