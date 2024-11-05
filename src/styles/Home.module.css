@@ -200,3 +200,13 @@
   margin-top: 45px; 
   text-align: center; /* Center aligns the header text */
 }
+
+.headerheading {
+  font-family: var(--font-luxury);
+  font-weight: 200;
+  letter-spacing: 5px;
+  color: white;
+  font-size: 0.9rem;
+  display: inline-block; /* Ensure the text stays centered */
+  margin-left: 10px;
+}

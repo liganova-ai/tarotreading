@@ -43,19 +43,16 @@ export default function Home() {
       <div className={styles.container}>
         {isLoading ? (
           <>
-          // Loading animation
+          <div className={styles.background}>
+            <img src="/resultsBackground.png" alt="Background" className={styles.backgroundImage} />
+          </div>
 
-          
-      <div className={styles.background}>
-          <img src="/resultsBackground.png" alt="Background" className={styles.backgroundImage} />
-        </div>
-
-        <header className={styles.header}>
-          <Link href="/">
-            <img src="/backButton.png" alt="Button" className={styles.headerButton} />
-          </Link>
-          <h1 className={styles.headerheading}>LIGAORACLE</h1>
-        </header>
+          <header className={styles.header}>
+            <Link href="/">
+              <img src="/backButton.png" alt="Button" className={styles.headerButton} />
+            </Link>
+            <h1 className={styles.headerheading}>LIGAORACLE</h1>
+          </header>
           
           <div className={styles.loadingSection}>
             <div className={styles.loadingCircles}>
