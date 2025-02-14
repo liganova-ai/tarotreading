@@ -6,7 +6,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // All images to preload
+    // Start preloading images after initial render
     const imageUrls = [
       '/indexBackground.png',
       '/prequestionBackground.png',
@@ -27,7 +27,7 @@ export default function Home() {
       img.onload = () => {
         loadedImages += 1;
         if (loadedImages === imageUrls.length) {
-          setIsLoading(false);
+          setIsLoading(false); // Only hide loading overlay once all images are preloaded
         }
       };
       img.onerror = () => {
@@ -41,21 +41,24 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
-      {isLoading && (
+      {isLoading ? (
         <div className={styles.loadingOverlay}>
           <img src="/bouncing-circles.svg" alt="Loading" className={styles.loadingImage} />
         </div>
+      ) : (
+        <>
+          <div className={styles.background}>
+            <img src="/indexBackground.png" alt="Background" className={styles.backgroundImage} />
+          </div>
+          <h1 className={styles.heading}>LIGAORACLE</h1>
+          <div className={styles.footer}>
+            <p className={styles.smallText}>Look into the future and discover what awaits</p>
+            <Link href="/disclaimer">
+              <button className={styles.startButton}>Start</button>
+            </Link>
+          </div>
+        </>
       )}
-      <div className={styles.background}>
-        <img src="/indexBackground.png" alt="Background" className={styles.backgroundImage} />
-      </div>
-      <h1 className={styles.heading}>LIGAORACLE</h1>
-      <div className={styles.footer}>
-        <p className={styles.smallText}>Look into the future and discover what awaits</p>
-        <Link href="/disclaimer">
-          <button className={styles.startButton}>Start</button>
-        </Link>
-      </div>
     </div>
   );
 }
