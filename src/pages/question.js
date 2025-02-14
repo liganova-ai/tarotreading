@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import styles from '../styles/question.module.css'; // Change the import to use prequestion styles
+import styles from '../styles/question.module.css'; 
 
 export default function QuestionPage() {
   const router = useRouter();
   const { adjectives } = router.query; // Get adjectives from query
   const [question, setQuestion] = useState('');
 
+  // For changes in input field, saved to UseState, then sent with next Link to next page 
   const handleChange = (e) => setQuestion(e.target.value);
 
    // Function to handle the Enter key press

@@ -14,15 +14,16 @@ export default function CardsPage() {
   const router = useRouter();
   const { question, adjectives } = router.query;
   const [selectedCards, setSelectedCards] = useState([]);
-  const [currentCard, setCurrentCard] = useState(0);
   const [shuffledCards, setShuffledCards] = useState([]); // Store shuffled cards
   const carouselRef = useRef(null);
 
-  // Shuffle cards on component mount
+  // Shuffle cards on component mount (when User first enters --> page numbers from 1-78 are 
+  // shuffled and saved in a UseState, later they are used to map the rendered Cards randomly 
   useEffect(() => {
     setShuffledCards(shuffleArray([...originalCards]));
   }, []);
 
+  // When User clicks Card - Cards get added to UseState "selectedCards"
   const handleCardClick = (cardNumber) => {
     if (selectedCards.length < 3 && !selectedCards.includes(cardNumber)) {
       setSelectedCards([...selectedCards, cardNumber]);
@@ -31,12 +32,7 @@ export default function CardsPage() {
     }
   };
 
-  const handleSelectCard = () => {
-    if (!selectedCards.includes(currentCard)) {
-      handleCardClick(currentCard);
-    }
-  };
-
+  // handle Carousel Dragging 
   const handleMouseDown = (e) => {
     const carousel = carouselRef.current;
     carousel.isDown = true;

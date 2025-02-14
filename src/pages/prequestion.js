@@ -23,6 +23,7 @@ export default function Prequestion() {
     setOverlayVisible(!isOverlayVisible); // Toggle the overlay visibility
   };
 
+  // To get selected adjectives as text string from selected bubbles 
   const selectedAdjectives = selectedBubbles
     .map((selected, index) =>
       selected ? [
@@ -39,7 +40,8 @@ export default function Prequestion() {
     )
     .filter(Boolean)
     .slice(0, 3);
-
+     
+    // for Overlay Styling of Headings 
     const personalityHeadings = [
       "Introduction",
       "Reformer",

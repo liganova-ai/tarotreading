@@ -180,7 +180,7 @@ export default function ResultsPage() {
   const [isAudioFetched, setIsAudioFetched] = useState(false);
   const audioRef = useRef(null);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
-  const isFetchingRef = useRef(false);
+  const isFetchingRef = useRef(false); // useRef: does not trigger re-render, to check if Prediciton is being fetched from API Endpoint
 
   const modalRef = useRef(null);
   const parsedCards = cards ? JSON.parse(cards) : [];
@@ -272,6 +272,7 @@ export default function ResultsPage() {
     fetchPrediction();
   }, [router.isReady, question, cards, adjectives]);
 
+  // for Overlay Modal when clicking one Card for further explanation
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
@@ -290,34 +291,7 @@ export default function ResultsPage() {
     };
   }, [selectedCardIndex]);
 
-  const openModal = (index) => {
-    setSelectedCardIndex(index);
-  };
 
-  const closeModal = () => {
-    setSelectedCardIndex(null);
-  
-    // Reset audio state to show the SpeakButton in initial state
-    setIsAudioFetched(false);
-    setIsPlaying(false);
-  
-    if (audioRef.current) {
-      audioRef.current.src = ''; // Clear current audio source
-    }
-  };
-
-  // Navigate between cards (ensure cycling)
-  const handlePrev = () => {
-    setSelectedCardIndex((prevIndex) =>
-      prevIndex === 0 ? parsedCards.length - 1 : prevIndex - 1
-    );
-  };
-
-  const handleNext = () => {
-    setSelectedCardIndex((prevIndex) =>
-      prevIndex === parsedCards.length - 1 ? 0 : prevIndex + 1
-    );
-  };
 
   if (loading) return (
     <div className={styles.container}>
@@ -364,7 +338,7 @@ export default function ResultsPage() {
         <h1 className={styles.topheading}>The cards have spoken</h1>
       </div>
 
-      {/* Hide content when modal is open */}
+      {/* Main content, hidden when overlay modal for card explanation is open (/a Card is selected) */}
       {selectedCardIndex === null && (
           <>
             <div className={styles.cardsSection}>
