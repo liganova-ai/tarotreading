@@ -291,7 +291,9 @@ export default function ResultsPage() {
     };
   }, [selectedCardIndex]);
 
-
+  const closeModal = () => {
+    setSelectedCardIndex(null);
+  };
 
   if (loading) return (
     <div className={styles.container}>
