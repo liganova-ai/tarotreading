@@ -172,7 +172,7 @@ export default function ResultsPage() {
   const router = useRouter();
   const { question, cards, adjectives } = router.query;
   const [prediction, setPrediction] = useState('');
-  const [paragraphs, setParagraphs] = useState([]);
+  const [paragraphs, setParagraphs] = useState([]); // split long prediction into paragraphs, save to array 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isFetchingAudio, setIsFetchingAudio] = useState(false);
@@ -338,7 +338,7 @@ export default function ResultsPage() {
         <h1 className={styles.topheading}>The cards have spoken</h1>
       </div>
 
-      {/* Main content, hidden when overlay modal for card explanation is open (/a Card is selected) */}
+      {/* Main content, hidden when overlay modal for card explanation is open (when a Card was selected by user) */}
       {selectedCardIndex === null && (
           <>
             <div className={styles.cardsSection}>

@@ -3,13 +3,17 @@ import { useState } from 'react';
 import styles from '../styles/prequestion.module.css';
 
 export default function Prequestion() {
-  const [selectedBubbles, setSelectedBubbles] = useState(Array(6).fill(false));
+  const [selectedBubbles, setSelectedBubbles] = useState(Array(6).fill(false)); // basically starts as an Array with [False, False, False, .....]
   const [isOverlayVisible, setOverlayVisible] = useState(false); // State for toggling the rectangle
 
+  // if user clicks on one bubble, its saved to the useState SelectedBubbles, Bubbles are Indexed --> their place in the array is set to True 
   const handleBubbleClick = (index) => {
+    // save selected bubbles to array
     const newSelection = [...selectedBubbles];
+    // counts how many bubbles are currently selected 
     const selectedCount = newSelection.filter(Boolean).length;
 
+    // if its not the selected index and the user has not selected 3 bubbles, the index is set to true
     if (!newSelection[index] && selectedCount < 3) {
       newSelection[index] = true;
     } else if (newSelection[index]) {
@@ -20,7 +24,7 @@ export default function Prequestion() {
   };
 
   const toggleOverlay = () => {
-    setOverlayVisible(!isOverlayVisible); // Toggle the overlay visibility
+    setOverlayVisible(!isOverlayVisible); // Toggle the overlay visibility - Reverse of what it is now (true/false)
   };
 
   // To get selected adjectives as text string from selected bubbles 
@@ -99,7 +103,7 @@ export default function Prequestion() {
   </div>
 </div>
 
-
+{/*Index of Adjectives + Bubbles*/}
       <div className={styles.bubblesContainer}>
         {[
           "Reformer",
@@ -121,7 +125,7 @@ export default function Prequestion() {
           </div>
         ))}
       </div>
-
+{/*check if at least one bubble is selected, else the button to continue is disabled*/}
       <Link href={{ pathname: '/question', query: { adjectives: JSON.stringify(selectedAdjectives) } }}>
         <button 
           className={`${styles.startButton} ${selectedBubbles.some(Boolean) ? '' : styles.disabledButton}`} 
@@ -131,7 +135,7 @@ export default function Prequestion() {
         </button>
       </Link>
 
-
+{/*stopPropagination = to disable clicks underneath the overlay*/}
       {isOverlayVisible && (
         <div className={styles.overlay} onClick={toggleOverlay}>
           <div className={styles.overlayContent} onClick={(e) => e.stopPropagation()}>
