@@ -1,7 +1,6 @@
 .container {
-  position: relative;
-  height: calc(100vh - 15%);
-  width: 100vw;
+  min-height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: space-between; /* Distribute space evenly */
@@ -40,8 +39,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end; /* Push footer items to the bottom */
-  margin-bottom: 30px; /* Space from the bottom */
+  justify-content: flex-end; 
+  padding-top: 65vh; 
+  padding-inline: 30px;
+  margin-top: auto;
 }
 
 .smallText {
@@ -68,7 +69,7 @@
 /* Mobile responsiveness */
 @media only screen and (max-width: 600px) {
   .container {
-    height: 100vh; /* Keep full height */
+    min-height: 100%; /* Keep full height */
     width: 100%;
     padding: 20px;
   }
