@@ -1,8 +1,7 @@
-import { OpenAI } from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { normalizeReadingSegments, READING_SEGMENTS_SCHEMA } from '@/lib/readingSegments.mjs';
+import { oracleFailureCode, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
+import { getOpenAI } from '@/lib/openai';
+import { isTarotQuestion, QUESTION_ERROR, READING_PROMPT, structuredReply, validateReadingInput } from '@/lib/tarotValidation.mjs';
 
 const cardNames = {
   '1': 'The Fool',
@@ -85,47 +84,35 @@ const cardNames = {
   '78': 'King of Pentacles' 
 };
 
+const traits = {
+  Reformer: 'principled, purposeful, perfectionistic', Helper: 'caring, empathetic, people-pleasing',
+  Achiever: 'ambitious, adaptable, image-conscious', Individualist: 'sensitive, creative, introspective',
+  Investigator: 'independent, perceptive, knowledge-seeking', Loyalist: 'responsible, security-oriented, trustworthy',
+  Enthusiast: 'energetic, spontaneous, optimistic', Challenger: 'assertive, confident, protective',
+  Peacemaker: 'agreeable, patient, supportive',
+};
+
+export const config = { api: { bodyParser: { sizeLimit: '8kb' } } };
+
 export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    const { question, cards, adjectives } = req.body; 
-    console.log("Request body:", req.body);  
-    console.log("Question:", question);
-    console.log("Cards:", cards);
-    console.log("Adjectives:", adjectives);
-
-
-
-    try {
-      const prediction = await generatePrediction(question, cards, adjectives); 
-      console.log(prediction);
-      res.status(200).json({ prediction });
-    } catch (error) {
-      console.error('Error generating prediction:', error);
-      res.status(500).json({ error: 'Failed to generate prediction' });
-    }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
+  const input = validateReadingInput(req.body);
+  if (!input.ok) return res.status(400).json({ error: input.error });
+  try {
+    const client = getOpenAI();
+    // Always re-check here: a client can skip the question page entirely.
+    if (!await isTarotQuestion(client, input.question)) return res.status(400).json({ error: QUESTION_ERROR });
+    const result = await structuredReply(client, READING_PROMPT, {
+      question: input.question,
+      cards: input.cards.map(card => cardNames[card]),
+      personalityTraits: input.adjectives.map(type => traits[type]),
+    }, 'tarot_reading', { allowed: { type: 'boolean' }, segments: READING_SEGMENTS_SCHEMA });
+    if (result.allowed !== true) return res.status(400).json({ error: QUESTION_ERROR });
+    const segments = normalizeReadingSegments(result.segments);
+    return res.status(200).json({ prediction: segments.map(segment => segment.text).join('\n\n'), segments });
+  } catch (error) {
+    const code = oracleFailureCode(error);
+    return res.status(503).json({ code, error: oracleAvailabilityMessage(code) });
   }
 }
-
-async function generatePrediction(question, cards, adjectives) { //all params
-
-   
-    const selectedCardNames = cards.map(card => cardNames[card] || card).filter(name => name);
-    console.log("selected cards", selectedCardNames);
-
-    const prompt = `question = ${question}, selected tarot cards = ${selectedCardNames.join(', ')}, personality types = ${adjectives.join(', ')}. Don't mention the personality traits literally, but consider them for the prediction.`;
-
-    const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini', 
-        messages: [
-            { role: "system", content: "You are a tarot card reader. Based on the question provided, the selected tarot cards and the personality types you create a seamlessly blending tarot reading where the types are woven into the answers of each single card. Do never mention the types themselves. Always mention at the end what the cards mean together. The length should not be longer than 800 characters. Use paragraphs to structure the text. Reference the cards without using '(' or ')'. Personality Type descriptions: Reformer: Principled, purposeful, perfectionist. Fears corruption, desires integrity. Vice: anger, virtue: serenity. Helper: Caring, empathetic, people-pleasing. Fears being unlovable, desires love. Vice: pride, virtue: humility.Achiever: Ambitious, adaptable, image-conscious. Fears worthlessness, desires admiration. Vice: deceit, virtue: truthfulness.Individualist: Sensitive, creative, introspective. Fears being ordinary, desires authenticity. Vice: envy, virtue: equanimity.Investigator: Independent, perceptive, knowledge-seeking. Fears incompetence, desires understanding. Vice: avarice, virtue: detachment.Loyalist: Responsible, security-oriented, trustworthy. Fears lack of support, desires guidance. Vice: fear, virtue: courage.Enthusiast: Energetic, spontaneous, optimistic. Fears deprivation, desires contentment. Vice: gluttony, virtue: sobriety.Challenger: Assertive, confident, protective. Fears being controlled, desires autonomy. Vice: lust, virtue: innocence.Peacemaker: Agreeable, patient, supportive. Fears conflict, desires peace. Vice: sloth, virtue: action." },
-            { role: 'user', content: prompt },
-        ],
-        max_tokens: 500,
-    });
-
-    return response.choices[0].message.content.trim();
-}
-

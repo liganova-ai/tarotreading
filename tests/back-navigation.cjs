@@ -1,0 +1,46 @@
+const assert = require('node:assert/strict');
+const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright');
+(async () => {
+ const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+ try {
+  const page=await browser.newPage({viewport:{width:400,height:842}});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/tarot_glow_music.mp3',r=>r.abort());
+  const base=process.env.DECK_TEST_URL||'http://127.0.0.1:3000';
+  const query=new URLSearchParams({question:'What should I focus on this week?',adjectives:'["Helper","Investigator"]',cards:'[1,2,3]',oracleStatus:'AI_UNAVAILABLE'});
+  await page.goto(base+'/results?'+query);
+  await page.getByRole('group',{name:'Your tarot cards'}).waitFor();
+  await page.getByRole('button',{name:'Explore The Magician',exact:true}).click();
+  await page.getByRole('dialog').waitFor();
+  await page.getByRole('button',{name:'Go back',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'detached'});
+  assert.equal(new URL(page.url()).pathname,'/results');
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.waitForURL('**/cards?**');
+  await page.getByRole('status',{name:'Card selection'}).waitFor();
+  assert.equal(await page.getByRole('status',{name:'Card selection'}).getAttribute('data-count'),'3');
+  assert.equal(await page.getByRole('button',{name:'Ask the oracle'}).isEnabled(),true);
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.waitForURL('**/question?**');
+  await page.getByRole('textbox',{name:'Your tarot question'}).waitFor();
+  assert.equal(await page.getByRole('textbox',{name:'Your tarot question'}).inputValue(),'What should I focus on this week?');
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.waitForURL('**/prequestion?**');
+  await page.getByRole('button',{name:'Helper',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Helper',exact:true}).getAttribute('aria-pressed'),'true');
+  assert.equal(await page.getByRole('button',{name:'Investigator',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.getByRole('button',{name:'Confirm',exact:true}).click();
+  await page.getByRole('textbox',{name:'Your tarot question'}).waitFor();
+  assert.equal(await page.getByRole('textbox',{name:'Your tarot question'}).inputValue(),'What should I focus on this week?');
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.getByRole('button',{name:'Helper',exact:true}).waitFor();
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.waitForURL('**/disclaimer');
+  await page.getByRole('heading',{name:'Disclaimer',exact:true}).waitFor();
+  await page.getByRole('link',{name:'Go back',exact:true}).click();
+  await page.waitForURL(base+'/');
+  await page.getByRole('link',{name:'Start',exact:true}).waitFor();
+  assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({backAcrossAllSteps:'passed',focusedCardBack:'passed',questionAndChoicesPreserved:'passed',errors}));
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exitCode=1});

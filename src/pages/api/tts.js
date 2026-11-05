@@ -1,33 +1,17 @@
-import { OpenAI } from 'openai';
+import { getOpenAI } from '@/lib/openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
 export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    const { text } = req.body;
-
-    try {
-      const mp3Response = await openai.audio.speech.create({
-        model: 'tts-1',
-        voice: 'alloy',
-        input: text,
-      });
-
-      // Convert the response to a Buffer and directly send it without saving
-      const buffer = Buffer.from(await mp3Response.arrayBuffer());
-
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Disposition', 'inline; filename="speech.mp3"');
-      res.status(200).send(buffer);
-
-    } catch (error) {
-      console.error('TTS Error:', error);
-      res.status(500).json({ error: 'Failed to generate audio' });
-    }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
+  const text = req.body?.text;
+  if (typeof text !== 'string' || !text.trim() || text.length > 4096) return res.status(400).json({ error: 'Please provide a reading to narrate.' });
+  try {
+    const audio = await getOpenAI().audio.speech.create({ model: 'tts-1', voice: 'alloy', input: text });
+    res.setHeader('Content-Type', 'audio/mpeg');
+    return res.status(200).send(Buffer.from(await audio.arrayBuffer()));
+  } catch {
+    return res.status(503).json({ error: 'The oracle’s voice is resting for now.' });
   }
 }

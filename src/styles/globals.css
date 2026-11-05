@@ -31,6 +31,21 @@ a {
   text-decoration: none;
 }
 
+.app-shell { position: relative; isolation: isolate; min-height: 100svh; }
+.page-content { position: relative; z-index: 1; min-height: 100svh; }
+.page-content h1:focus { outline: none; }
+
+button, a, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+button, a[class] { transition: background-color .25s ease, color .25s ease, opacity .25s ease, box-shadow .25s ease; }
+button:not(:disabled):hover, a[class]:hover { box-shadow: 0 0 24px #ffffff1c; }
+button:not(:disabled):active, a[class]:active { opacity: .78; }
+:focus-visible { outline: 2px solid #fff; outline-offset: 5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
