@@ -1,17 +1,40 @@
 import { disposePreparedReadingAudio } from '@/lib/readingAudio';
 import "@/styles/globals.css";
 import localFont from 'next/font/local';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import OracleScene from '@/components/OracleScene';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+// Next must retain outgoing step styles until AnimatePresence finishes exiting.
+import '@/styles/Home.module.css';
+import '@/styles/Wizard.module.css';
+import '@/styles/BackControl.module.css';
+import '@/styles/disclaimer.module.css';
+import '@/styles/prequestion.module.css';
+import '@/styles/question.module.css';
+import '@/styles/cards.module.css';
+import '@/styles/results.module.css';
+
 
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
+  const [fontsReady, setFontsReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    // Warm every face used by the wizard before revealing its first page.
+    Promise.allSettled([
+      document.fonts.load(`200 16px ${luxury.style.fontFamily}`),
+      document.fonts.load(`300 16px ${sabon.style.fontFamily}`),
+      document.fonts.load(`italic 500 16px ${sabon.style.fontFamily}`),
+      document.fonts.load(`800 16px ${sabon.style.fontFamily}`),
+    ]).then(() => { if (active) setFontsReady(true); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     ['/disclaimer', '/prequestion', '/question', '/cards', '/results'].forEach(path => router.prefetch(path));
@@ -22,14 +45,14 @@ export default function App({ Component, pageProps }) {
   }, [router.pathname]);
 
   return (
-    <main className={`app-shell ${luxury.variable} ${sabon.variable}`}>
+    <main className={`app-shell ${luxury.variable} ${sabon.variable}`} data-fonts-ready={fontsReady}>
       <OracleScene pathname={router.pathname} />
       <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
         <motion.div
           className="page-content"
           key={router.pathname}
           initial={{ opacity: reducedMotion ? 1 : 0, y: reducedMotion ? 0 : 12 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: fontsReady ? 1 : 0, y: fontsReady || reducedMotion ? 0 : 12 }}
           exit={{
             opacity: reducedMotion ? 1 : 0,
             y: reducedMotion ? 0 : -8,
@@ -52,46 +75,50 @@ export default function App({ Component, pageProps }) {
 const luxury = localFont({
   src: [
     {
-      path: '/fonts/Luxury-Diamond.otf',
+      path: '/fonts/Luxury-Diamond.woff2',
       weight: '300',
-      style: 'diamond',
+      style: 'normal',
     },
     {
-      path: '/fonts/Luxury-Gold.otf',
+      path: '/fonts/Luxury-Gold.woff2',
       weight: '200',
-      style: 'golden',
+      style: 'normal',
     },
     {
-      path: '/fonts/Luxury-Platinum.otf',
+      path: '/fonts/Luxury-Platinum.woff2',
       weight: '700',
-      style: 'platinum',
+      style: 'normal',
     },
   ],
+  display: 'block',
+  preload: true,
   variable: '--font-luxury',  // css variable name 
 });
 
 const sabon = localFont({
   src: [
     {
-      path: '/fonts/SabonLTStd-Roman.otf',
+      path: '/fonts/SabonLTStd-Roman.woff2',
       weight: '300',
-      style: 'Roman',
+      style: 'normal',
     },
     {
-      path: '/fonts/SabonLTStd-Italic.otf',
+      path: '/fonts/SabonLTStd-Italic.woff2',
       weight: '500',
-      style: 'Italic',
+      style: 'italic',
     },
     {
-      path: '/fonts/SabonLTStd-BoldItalic.otf',
+      path: '/fonts/SabonLTStd-BoldItalic.woff2',
       weight: '700',
-      style: 'BoldItalic',
+      style: 'italic',
     },
     {
-      path: '/fonts/SabonLTStd-Bold.otf',
+      path: '/fonts/SabonLTStd-Bold.woff2',
       weight: '800',
-      style: 'Bold',
+      style: 'normal',
     },
   ],
+  display: 'block',
+  preload: true,
   variable: '--font-sabon',  // css variable name
 });

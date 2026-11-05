@@ -33,6 +33,7 @@ a {
 
 .app-shell { position: relative; isolation: isolate; min-height: 100svh; }
 .page-content { position: relative; z-index: 1; min-height: 100svh; }
+.app-shell[data-fonts-ready="false"] .page-content { visibility: hidden; }
 .page-content h1:focus { outline: none; }
 
 button, a, textarea { -webkit-tap-highlight-color: transparent; }

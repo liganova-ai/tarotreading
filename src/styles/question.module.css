@@ -1,6 +1,8 @@
 .title { text-align: center; font: 200 clamp(32px, 8vw, 40px) var(--font-luxury); max-width: 600px; margin: 0 auto; }
 .writingArea { position: absolute; top: 50svh; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; justify-content: center; width: calc(100% - 48px); max-width: 680px; margin: 0; }
-.input { display: block; width: 100%; min-height: 0; max-height: 36svh; overflow-y: auto; border: 0; border-radius: 0; background: transparent; resize: none; outline: none; box-shadow: none; padding: 16px 8px; color: #fff; caret-color: white; font: italic 500 clamp(28px, 6.8vw, 34px)/1.4 var(--font-sabon); letter-spacing: .01em; text-align: center; }
+.input { display: block; width: 100%; min-height: 0; max-height: 36svh; overflow-y: auto; scrollbar-width: none; border: 0; border-radius: 0; background: transparent; resize: none; outline: none; box-shadow: none; padding: 16px 8px; color: #fff; caret-color: white; font: italic 500 clamp(28px, 6.8vw, 34px)/1.4 var(--font-sabon); letter-spacing: .01em; text-align: center; }
 .input:focus-visible { outline: none; }
 .input::placeholder { color: #ffffff70; }
 .error { position: absolute; top: 100%; left: 0; right: 0; color: #eee; text-align: center; line-height: 1.4; font-size: 16px; padding: 16px 8px; }
+
+.input::-webkit-scrollbar { display: none; width: 0; height: 0; }

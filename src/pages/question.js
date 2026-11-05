@@ -22,8 +22,9 @@ export default function QuestionPage() {
     };
     fitText();
     document.fonts.ready.then(fitText);
+    document.fonts.addEventListener('loadingdone', fitText);
     window.addEventListener('resize', fitText);
-    return () => { active = false; window.removeEventListener('resize', fitText); };
+    return () => { active = false; document.fonts.removeEventListener('loadingdone', fitText); window.removeEventListener('resize', fitText); };
   }, [question]);
 
   useEffect(() => {
