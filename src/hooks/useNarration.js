@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { takeReadingAudio, MUSIC_INTRO_MS, MUSIC_LEVEL, MUSIC_UNDER_VOICE, MUSIC_URL } from '@/lib/readingAudio';
 
+const SPOKEN_WELCOME = 'Welcome to the oracle. Here is your personal tarot reading. Take a quiet breath, and let the cards guide you.';
+
 export default function useNarration(segments, enabled) {
   const [status, setStatus] = useState('idle');
   const [hasStarted, setHasStarted] = useState(false);
@@ -15,11 +17,12 @@ export default function useNarration(segments, enabled) {
     const { audio, music, mixer } = bundle;
     const controller = new AbortController();
     const urls = [];
-    const session = { audio, music, mixer, bundle, index: 0, disposed: false, introDone: false, musicFailed: false, speaking: false, request: 0 };
+    const session = { audio, music, mixer, bundle, index: -1, disposed: false, introDone: false, musicFailed: false, speaking: false, request: 0 };
     sessionRef.current = session;
     setStatus('loading');
 
-    const clips = segments.map(async segment => {
+    const spokenSegments = [{ cardIndex: -2, text: SPOKEN_WELCOME }, ...segments];
+    const clips = spokenSegments.map(async segment => {
       try {
         const response = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
         if (!response.ok) throw new Error('Speech unavailable');
@@ -91,7 +94,7 @@ export default function useNarration(segments, enabled) {
       session.index = index;
       session.speaking = false;
       if (session.started) audio.pause();
-      setSegmentIndex(Math.min(index, segments.length - 1));
+      setSegmentIndex(Math.max(0, Math.min(index, segments.length - 1)));
       setActiveCard(-2);
       if (index >= segments.length) {
         music.loop = false;
@@ -105,7 +108,7 @@ export default function useNarration(segments, enabled) {
       setStatus('loading');
       try {
         await startMusic();
-        const clip = await clips[index];
+        const clip = await clips[index + 1];
         if (session.disposed || request !== session.request) return;
         if (!clip.url) { failVoice(clip.error); return; }
         audio.src = clip.url;
@@ -120,7 +123,7 @@ export default function useNarration(segments, enabled) {
       session.speaking = true;
       setHasStarted(true);
       setStatus('playing');
-      setActiveCard(segments[session.index].cardIndex);
+      setActiveCard(session.index < 0 ? -2 : segments[session.index].cardIndex);
     };
     audio.onpause = () => {
       if (!session.disposed && session.speaking && !audio.ended) {
@@ -138,7 +141,7 @@ export default function useNarration(segments, enabled) {
         setStatus('ended');
       }
     };
-    play(0);
+    play(-1);
 
     return () => {
       session.disposed = true;
@@ -175,7 +178,7 @@ export default function useNarration(segments, enabled) {
       session.introDone = false;
       session.bundle.musicStartedAt = null;
       mixer.fadeMusic(0, 0);
-      await session.play(0);
+      await session.play(-1);
       return;
     }
     if (status === 'ready') { await session.play(session.index); return; }

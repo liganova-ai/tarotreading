@@ -89,7 +89,6 @@ const traits = {
   Achiever: 'ambitious, adaptable, image-conscious', Individualist: 'sensitive, creative, introspective',
   Investigator: 'independent, perceptive, knowledge-seeking', Loyalist: 'responsible, security-oriented, trustworthy',
   Enthusiast: 'energetic, spontaneous, optimistic', Challenger: 'assertive, confident, protective',
-  Peacemaker: 'agreeable, patient, supportive',
 };
 
 export const config = { api: { bodyParser: { sizeLimit: '8kb' } } };

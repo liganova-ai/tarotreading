@@ -7,6 +7,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
   let calls = 0;
   let providerMode = 'normal';
   let speechCalls = 0;
+  const spokenText = [];
   const wav = Buffer.alloc(44 + 16000);
   wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
   wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
@@ -21,6 +22,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     const request = JSON.parse(body);
     if (req.url.endsWith('/audio/speech')) {
       speechCalls++;
+      spokenText.push(request.input);
       assert.equal(request.model, 'tts-1');
       res.writeHead(200, { 'Content-Type': 'audio/wav' });
       return res.end(wav);
@@ -74,7 +76,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     assert.equal(await footerBottom(), baseline);
     assert.equal(await page.getByText('Find out more', { exact: true }).count(), 0);
     const gradients = await page.locator('button[aria-pressed]').evaluateAll(elements => elements.map(e => getComputedStyle(e, '::before').backgroundImage));
-    assert.equal(new Set(gradients).size, 9);
+    assert.equal(new Set(gradients).size, 8);
     await page.getByRole('button', { name: 'Investigator', exact: true }).click();
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     const question = page.getByRole('textbox', { name: 'Your tarot question' });
@@ -226,7 +228,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     const faded = await page.evaluate(() => ({ paused: window.__readingMedia.find(audio => audio.src.includes('tarot_glow_music')).paused, level: window.__readingGains[1].gain.value }));
     assert.equal(faded.paused, true);
     assert.ok(faded.level < .001);
-    assert.equal(speechCalls, 4);
+    assert.equal(speechCalls, 5);
+    assert.match(spokenText[0], /^Welcome to the oracle/);
     assert.ok(capturedReading.prediction.length > 800);
     assert.deepEqual(await page.locator('[class*="results_predictionText__"]').allTextContents(), capturedReading.segments.map(segment => segment.text));
     assert.ok(capturedReading.segments.every(segment => !segment.text.endsWith('…')));
@@ -260,7 +263,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
       await page.getByText(mode === 'outage' ? /AI energy has run dry/ : /run out of AI credits/).waitFor();
       assert.equal(await page.getByRole('img', { name: /^Card / }).count(), 3);
       assert.equal(await page.getByRole('button', { name: 'Speak Button' }).count(), 0);
-      assert.equal(await page.getByRole('button', { name: 'Ask another question' }).count(), 1);
+      assert.equal(await page.getByRole('button', { name: 'Start over' }).count(), 1);
       if (mode !== 'readingQuota') assert.equal(calls, beforeReading);
       if (mode === 'quota') { await page.waitForTimeout(600); await page.screenshot({ path: '/tmp/tarot-credits-fallback.png' }); }
     }
@@ -277,7 +280,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     await center.waitFor();
     await swipePage.waitForTimeout(2800);
     const cardName = await center.getAttribute('aria-label');
-    const selected = swipePage.getByRole('button', { name: cardName, exact: true });
+    const selected = swipePage.locator(`button[aria-label="${cardName}"]`);
     const hoverBox = await selected.boundingBox();
     await swipePage.mouse.move(hoverBox.x + hoverBox.width / 2, hoverBox.y + hoverBox.height / 2);
     await selected.click();
@@ -298,7 +301,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
       previousX = sample.x;
     }
     await swipePage.mouse.up();
-    await swipePage.waitForTimeout(350);
+    await swipePage.waitForTimeout(1900);
     assert.equal(await selected.getAttribute('aria-pressed'), 'true');
     const settled = await selected.evaluate(e => e.style.transform);
     await swipePage.waitForTimeout(400);
@@ -306,6 +309,6 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     await swipePage.screenshot({ path: '/tmp/tarot-stable-swipe.png' });
     await swipePage.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ mobileFlow: 'passed', desktopAndSmallMobile: 'passed', footerAlignment: 'passed', uniqueGradients: 9, slowIdleDriftAndReducedMotion: 'passed', animatedSelectionSymbols: 'passed', manualDeckAndShallowArc: 'passed', shadowFreeSelection: 'passed', stableSelectionDuringSwipe: 'passed', autoplayAndCardGlows: 'passed', musicIntroDuckingAndFadeOut: 'passed', previousAndNextNarration: 'passed', centeredLoadingOrbs: 'passed', completeLongReadingAndFade: 'passed', deckWrapAfter82Steps: 'passed', serverGuard: 'passed', quotaAndOutageFallbacks: 'passed', mockModelCalls: calls, browserErrors: errors }));
+    console.log(JSON.stringify({ mobileFlow: 'passed', desktopAndSmallMobile: 'passed', footerAlignment: 'passed', uniqueGradients: 8, slowIdleDriftAndReducedMotion: 'passed', animatedSelectionSymbols: 'passed', manualDeckAndShallowArc: 'passed', shadowFreeSelection: 'passed', stableSelectionDuringSwipe: 'passed', autoplayAndCardGlows: 'passed', musicIntroDuckingAndFadeOut: 'passed', previousAndNextNarration: 'passed', centeredLoadingOrbs: 'passed', completeLongReadingAndFade: 'passed', deckWrapAfter82Steps: 'passed', serverGuard: 'passed', quotaAndOutageFallbacks: 'passed', mockModelCalls: calls, browserErrors: errors }));
   } finally { if (browser) await browser.close(); next.kill('SIGTERM'); await new Promise(resolve => provider.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

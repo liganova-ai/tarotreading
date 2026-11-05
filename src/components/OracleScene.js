@@ -1,3 +1,4 @@
+import GlassSphere, { SphereDefs, SphereArtwork } from '@/components/GlassSphere';
 import styles from '@/styles/OracleScene.module.css';
 import { useEffect, useRef, useState } from 'react';
 
@@ -43,58 +44,16 @@ export default function OracleScene({ pathname }) {
       <div className={styles.artwork}>
         <svg className={styles.composition} viewBox="0 0 400 860" fill="none">
           <defs>
-            <linearGradient id="oracle-glass" x1="300" y1="265" x2="110" y2="555" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#f5f5f5" /><stop offset=".27" stopColor="#cecece" />
-              <stop offset=".51" stopColor="#272727" /><stop offset=".64" stopColor="#161616" />
-              <stop offset=".83" stopColor="#9e9e9e" /><stop offset="1" stopColor="#fff" />
-            </linearGradient>
-            <radialGradient id="oracle-rim">
-              <stop offset=".72" stopColor="white" stopOpacity="0" /><stop offset=".93" stopColor="white" stopOpacity=".08" />
-              <stop offset="1" stopColor="white" stopOpacity=".75" />
-            </radialGradient>
-            <radialGradient id="oracle-reflection">
-              <stop stopColor="white" stopOpacity=".85" /><stop offset=".45" stopColor="white" stopOpacity=".2" /><stop offset="1" stopColor="white" stopOpacity="0" />
-            </radialGradient>
+            <SphereDefs id="oracle" />
             <linearGradient id="oracle-ground" x1="220" y1="573" x2="200" y2="760" gradientUnits="userSpaceOnUse">
               <stop stopColor="#151515" /><stop offset=".65" stopColor="#050505" /><stop offset="1" stopColor="#030303" />
             </linearGradient>
-            <clipPath id="oracle-sphere-clip"><circle cx="200" cy="410" r="163" /></clipPath>
-            <filter id="oracle-soft" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="22" /></filter>
-            <filter id="oracle-glint" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8" /></filter>
           </defs>
           <g className={styles.mountainDeparture}>
           <ellipse cx="202" cy="573" rx="172" ry="66" fill="#ddd" opacity=".55" filter="url(#oracle-soft)" />
           </g>
           <g className={styles.sphereDeparture}>
-          <g className={styles.sphere}>
-            <circle className={styles.body} cx="200" cy="410" r="163" fill="#1b1b1b" />
-            <g clipPath="url(#oracle-sphere-clip)">
-              <g className={styles.glass}>
-              <g className={styles.refraction}>
-                <circle cx="200" cy="410" r="205" fill="url(#oracle-glass)" />
-                <ellipse cx="274" cy="318" rx="150" ry="120" fill="url(#oracle-reflection)" opacity=".35" />
-              </g>
-              </g>
-              <ellipse className={styles.caustic} cx="180" cy="551" rx="152" ry="23" stroke="#fff" strokeWidth="13" opacity=".55" filter="url(#oracle-soft)" />
-              <rect className={styles.sphereGrain} x="35" y="245" width="330" height="330" filter="url(#oracle-grain)" opacity=".72" />
-            </g>
-            <circle cx="200" cy="410" r="163" fill="url(#oracle-rim)" opacity=".7" />
-            <circle cx="200" cy="410" r="162.6" stroke="#fff" strokeOpacity=".16" strokeWidth=".7" />
-            <g className={styles.reflectionStrength}>
-            <g className={styles.highlight}>
-              <ellipse cx="286" cy="316" rx="31" ry="33" fill="#fff" opacity=".84" filter="url(#oracle-glint)" />
-              <ellipse cx="275" cy="302" rx="55" ry="39" fill="url(#oracle-reflection)" opacity=".28" />
-            </g>
-            </g>
-            <g transform="translate(270 267)">
-              <g className={styles.starGlint}>
-                <circle r="18" fill="url(#oracle-reflection)" opacity=".45" />
-                <path d="M0-24C1-6 2-2 17 0C2 2 1 6 0 24C-1 6-2 2-17 0C-2-2-1-6 0-24Z" fill="white" />
-                <path d="M-7-7L7 7M7-7L-7 7" stroke="white" strokeWidth=".7" opacity=".75" />
-                <circle r="1.8" fill="white" />
-              </g>
-            </g>
-          </g>
+          <SphereArtwork id="oracle" />
           </g>
           <g className={styles.mountainDeparture}>
           <path d="M-80 720Q176 433 480 691V900H-80Z" fill="url(#oracle-ground)" />
@@ -112,6 +71,33 @@ export default function OracleScene({ pathname }) {
             </g>
           </g>
         </svg>
+        <svg className={styles.wideLandscape} viewBox="0 0 1440 900" preserveAspectRatio="none" fill="none">
+          <defs>
+            <linearGradient id="oracle-wide-ground" x1="720" y1="620" x2="720" y2="900" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#171717" /><stop offset=".7" stopColor="#050505" /><stop offset="1" stopColor="#030303" />
+            </linearGradient>
+            <filter id="oracle-wide-soft" x="-50%" y="-150%" width="200%" height="400%"><feGaussianBlur stdDeviation="26" /></filter>
+          </defs>
+          <g className={styles.mountainDeparture}>
+            <ellipse cx="720" cy="635" rx="230" ry="46" fill="#ddd" opacity=".28" filter="url(#oracle-wide-soft)" />
+            <path d="M-100 920Q720 420 1540 920V1000H-100Z" fill="url(#oracle-wide-ground)" />
+            <path d="M-100 920Q720 420 1540 920" stroke="#ddd" strokeOpacity=".09" />
+          </g>
+          <g className={styles.leaves} fill="#080808">
+            <g className={styles.leafLeft}>
+              <path d="M-30 30Q115 45 220 140Q119 145 44 101L85 170Q-4 158-30 102ZM-25 245Q104 246 169 345Q80 337 27 293L53 366Q-17 348-25 291ZM-25 587Q88 524 153 542Q102 606 28 628L55 665Q-13 669-25 632Z" />
+            </g>
+            <g className={styles.leafRight}>
+              <path d="M1470 26Q1330 45 1220 135Q1324 147 1395 99L1354 173Q1445 155 1470 100ZM1460 245Q1340 246 1272 344Q1364 338 1414 291L1388 364Q1452 347 1460 290ZM1462 590Q1352 528 1286 547Q1342 607 1412 630L1385 667Q1451 671 1462 634Z" />
+            </g>
+            <g className={styles.leafTop}>
+              <path d="M310-30Q419 8 431 119Q365 88 355 36L325 67Q302 26 310-30ZM1117-30Q1008 8 997 119Q1063 88 1072 36L1103 67Q1126 26 1117-30Z" />
+            </g>
+          </g>
+        </svg>
+        <div className={styles.wideSpherePlacement}>
+          <div className={styles.sphereDeparture}><GlassSphere className={styles.wideSphere} /></div>
+        </div>
       </div>
       <div className={styles.vignette} />
     </div>

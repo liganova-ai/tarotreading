@@ -11,6 +11,7 @@ import "slick-carousel/slick/slick-theme.css";
 import '@/styles/Home.module.css';
 import '@/styles/Wizard.module.css';
 import '@/styles/BackControl.module.css';
+import '@/styles/GlassDot.module.css';
 import '@/styles/disclaimer.module.css';
 import '@/styles/prequestion.module.css';
 import '@/styles/question.module.css';

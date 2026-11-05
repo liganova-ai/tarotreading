@@ -1,3 +1,5 @@
+import wizardStyles from '@/styles/Wizard.module.css';
+import GlassDot from '@/components/GlassDot';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { disposePreparedReadingAudio, ensurePreparedReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useState, useRef } from 'react';
@@ -185,6 +187,8 @@ export default function ResultsPage() {
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [focusGeometry, setFocusGeometry] = useState({ x: 0, y: 0, scale: 1, detailsTop: 0 });
   const reducedMotion = useReducedMotion();
+  const [isDesktop, setIsDesktop] = useState(false);
+  const readingRef = useRef(null);
   const cardButtons = useRef([]);
   const isFetchingRef = useRef(false); // useRef: does not trigger re-render, to check if Prediciton is being fetched from API Endpoint
 
@@ -197,6 +201,49 @@ export default function ResultsPage() {
   }, []);
 
   const narration = useNarration(segments, !!prediction && !availability);
+  const readingVisible = !loading && (narration.hasStarted || ['ready', 'error'].includes(narration.status));
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 960px)');
+    const update = () => setIsDesktop(media.matches);
+    update(); media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    const element = readingRef.current;
+    if (!element) return;
+    if (!isDesktop) { element.style.removeProperty('--reading-font-size'); return; }
+    if (!readingVisible || !prediction) return;
+    let disposed = false;
+    let frame;
+    const fit = () => {
+      if (disposed || !element.isConnected || !element.clientHeight) return;
+      const upper = Math.min(17, Math.max(13, window.innerHeight * .018));
+      const apply = size => element.style.setProperty('--reading-font-size', `${size}px`);
+      const updateOverflow = () => { element.dataset.overflow = String(element.scrollHeight > element.clientHeight + 1); };
+      apply(upper);
+      if (element.scrollHeight <= element.clientHeight + 1) { updateOverflow(); return; }
+      // Fit the complete reading without cutting or shortening its content.
+      let low = 12, high = upper;
+      apply(low);
+      if (element.scrollHeight > element.clientHeight + 1) { updateOverflow(); return; }
+      for (let step = 0; step < 6; step++) {
+        const middle = (low + high) / 2;
+        apply(middle);
+        if (element.scrollHeight <= element.clientHeight + 1) low = middle;
+        else high = middle;
+      }
+      apply(Math.floor(low * 10) / 10);
+      updateOverflow();
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fit); };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(element);
+    document.fonts.ready.then(schedule);
+    fit();
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [isDesktop, readingVisible, prediction]);
 
   useEffect(() => {
     if (!router.isReady || !question || !cards || !adjectives) {
@@ -283,11 +330,14 @@ export default function ResultsPage() {
 
   const measureFocus = element => {
     const group = element.parentElement;
-    const container = group.parentElement;
-    const targetWidth = Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
+    const container = group.closest(`[data-focused]`);
+    const desktop = window.innerWidth >= 960;
+    const targetWidth = desktop
+      ? Math.min(280, container.clientWidth * .25, container.clientHeight * .3)
+      : Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
     const scale = targetWidth / element.offsetWidth;
     return {
-      x: group.clientWidth / 2 - element.offsetLeft - element.offsetWidth / 2,
+      x: container.clientWidth / 2 - group.offsetLeft - element.offsetLeft - element.offsetWidth / 2,
       y: container.clientHeight / 2 - group.offsetTop - element.offsetTop - element.offsetHeight / 2,
       scale,
       detailsTop: container.clientHeight / 2 + element.offsetHeight * scale / 2 + 28,
@@ -299,7 +349,7 @@ export default function ResultsPage() {
     setFocusGeometry(measureFocus(element));
     setSelectedCardIndex(index);
   };
-  const cardTransition = { duration: reducedMotion ? 0 : .85, ease: [.22, 1, .36, 1] };
+  const cardTransition = { duration: reducedMotion ? 0 : isDesktop ? 1.15 : .85, ease: [.22, 1, .36, 1] };
 
   const backToCards = { pathname: '/cards', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
   const backToQuestion = { pathname: '/question', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}) } };
@@ -316,11 +366,7 @@ export default function ResultsPage() {
 
       <div className={styles.loadingSection} role="status" aria-live="polite">
         <div className={styles.loadingCircles}>
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
+          {[0, 1, 2].map(index => <span key={index} className={styles.circle}><GlassDot loading index={index} /></span>)}
         </div>
         <p className={styles.loadingText}>Your future is being processed...</p>
       </div>
@@ -337,14 +383,15 @@ export default function ResultsPage() {
         <h1 className={styles.headerheading}>LIGAORACLE</h1>
       </header>
 
+          <div className={styles.cardsColumn}>
             <div className={styles.cardsSection} role="group" aria-label="Your tarot cards">
               {parsedCards.map((cardNumber, index) => (
                 <motion.button type="button" key={cardNumber} ref={element => { cardButtons.current[index] = element; }} className={styles.cardContainer}
                   initial={false}
                   animate={selectedCardIndex === null
-                    ? { x: 0, y: index === 1 ? -14 : 7, rotate: (index - 1) * 7, scale: 1, opacity: 1 }
+                    ? { x: 0, y: index === 1 ? -14 : isDesktop ? 18 : 7, rotate: (index - 1) * (isDesktop ? 12 : 7), originX: .5, originY: isDesktop ? 1.4 : .5, scale: 1, opacity: 1 }
                     : selectedCardIndex === index
-                      ? { x: focusGeometry.x, y: focusGeometry.y, rotate: 0, scale: focusGeometry.scale, opacity: 1 }
+                      ? { x: focusGeometry.x, y: focusGeometry.y, rotate: 0, originX: .5, originY: .5, scale: focusGeometry.scale, opacity: 1 }
                       : { x: index < selectedCardIndex ? '-100vw' : '100vw', y: 28, rotate: index < selectedCardIndex ? -24 : 24, scale: .92, opacity: 0 }}
                   transition={cardTransition}
                   data-card-selected={selectedCardIndex === index}
@@ -360,11 +407,9 @@ export default function ResultsPage() {
                 </motion.button>
               ))}
             </div>
-
-          <div className={styles.predictionSection}>
-            <motion.div className={styles.readingContent} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
-              animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
-              transition={{ duration: reducedMotion ? 0 : .6, ease: [.22, 1, .36, 1] }}>
+            <motion.div className={styles.underCardsControls} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
+              animate={{ opacity: selectedCardIndex !== null ? 0 : 1, y: selectedCardIndex !== null ? 24 : 0 }}
+              transition={{ duration: reducedMotion ? 0 : isDesktop ? .9 : .6, ease: [.22, 1, .36, 1] }}>
             {!availability && <>
               <div className={styles.playbackControls}>
               <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label="Previous card">
@@ -385,7 +430,14 @@ export default function ResultsPage() {
               </div>
               {narration.status === 'error' && <p className={styles.audioHint}>The oracle’s voice is resting.</p>}
             </>}
-            <div className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
+            </motion.div>
+          </div>
+
+          <div className={styles.predictionSection}>
+            <motion.div className={styles.readingContent} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
+              animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
+              transition={{ duration: reducedMotion ? 0 : isDesktop ? .95 : .6, ease: [.22, 1, .36, 1] }}>
+            <div ref={readingRef} className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
             {availability ? <p>{availability}</p> : segments.map((segment, index) => (
               <p key={index} className={styles.predictionText} data-speaking={narration.activeCard === segment.cardIndex}>{segment.text}</p>
             ))}
@@ -402,7 +454,10 @@ export default function ResultsPage() {
             </AnimatePresence>
           </div>
 
-          <PageAction disabled={selectedCardIndex !== null} onClick={() => router.push('/')}>Ask another question</PageAction>
+          <footer className={styles.resultActions} aria-hidden={selectedCardIndex !== null}>
+            <button type="button" className={wizardStyles.action} disabled={selectedCardIndex !== null}
+              onClick={() => router.push('/')}>Start over</button>
+          </footer>
     </div>
   );
 }

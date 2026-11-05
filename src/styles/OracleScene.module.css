@@ -115,3 +115,29 @@
 
 .scene[data-scene='reading'] .atmosphere { animation: atmosphere-drift 24s ease-in-out infinite alternate; }
 @keyframes atmosphere-drift { from { transform: translate(-1%, 1%) scale(1); } to { transform: translate(3%, -2%) scale(1.06); } }
+
+.wideLandscape, .wideSpherePlacement { display: none; }
+@media (min-width: 960px) and (min-aspect-ratio: 4/3) {
+  .composition { display: none; }
+  .wideLandscape { display: block; position: absolute; inset: 0; width: 100%; height: 100%; }
+  .wideSpherePlacement { display: block; position: absolute; left: 50%; top: 45%; width: min(38vw, 48svh, 640px); aspect-ratio: 1; transform: translate(-50%, -50%); }
+  .wideSphere { display: block; width: 100%; height: auto; overflow: visible; }
+  .wideSpherePlacement .sphereDeparture { transform: translateY(-110svh); }
+  .sphereControl { top: 45%; width: min(34.411vw, 43.467svh, 579.556px); }
+  .scene[data-scene='home'] .vignette { background: radial-gradient(ellipse at 50% 46%, transparent 28%, #0006 100%); }
+}
+
+.pointerHighlight { animation: none; transform: translate(var(--sphere-glow-x, -86px), var(--sphere-glow-y, 94px)); transition: transform .45s cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) { .pointerHighlight { transition: none; } }
+
+.pointerRefraction {
+  animation: none;
+  transform: translate(var(--sphere-glass-x, 0px), var(--sphere-glass-y, 0px));
+  transition: transform .55s cubic-bezier(.22, 1, .36, 1);
+}
+.pointerCaustic {
+  animation: none; transform-origin: 200px 410px;
+  transform: translateX(calc(var(--sphere-glass-x, 0px) * .15));
+  transition: transform .55s cubic-bezier(.22, 1, .36, 1);
+}
+@media (prefers-reduced-motion: reduce) { .pointerRefraction, .pointerCaustic { transition: none; } }

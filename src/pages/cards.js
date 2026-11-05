@@ -1,3 +1,4 @@
+import GlassDot from '@/components/GlassDot';
 import { prepareReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -15,7 +16,7 @@ export default function CardsPage() {
   const buttons = useRef([]);
   const position = useRef(0);
   const geometry = useRef({ spacing: 101 * 1.18 });
-  const interaction = useRef({ drag: null, moved: false, hover: false, pauseUntil: 0 });
+  const interaction = useRef({ drag: null, moved: false, hover: false, coasting: false, pauseUntil: 0 });
   const layout = useRef(null);
   const settleFrame = useRef(null);
 
@@ -29,7 +30,9 @@ export default function CardsPage() {
   }, []);
 
   useEffect(() => {
-    if (!deck.length) return;
+    const element = deckRef.current;
+    if (!deck.length || !element) return;
+    let disposed = false;
     let width = 400;
     let radius = 1200;
     let scale = 1.18;
@@ -37,6 +40,7 @@ export default function CardsPage() {
     const entranceStarted = performance.now();
     let entranceAngle = reducedMotion.matches ? 0 : 1.2;
     const renderDeck = () => {
+      if (disposed || !element.isConnected) return;
       const spacing = geometry.current.spacing;
       buttons.current.forEach((button, index) => {
         if (!button) return;
@@ -53,8 +57,10 @@ export default function CardsPage() {
       });
     };
     const measureDeck = () => {
-      width = deckRef.current?.clientWidth || 400;
-      scale = Number(getComputedStyle(deckRef.current).getPropertyValue('--deck-scale')) || 1.18;
+      // Resize deliveries can arrive after React has detached the deck ref.
+      if (disposed || !element.isConnected) return;
+      width = element.clientWidth || 400;
+      scale = Number(getComputedStyle(element).getPropertyValue('--deck-scale')) || 1.18;
       radius = Math.max(1200, width * 2.1) * scale;
       geometry.current.spacing = (width < 600 ? 101 : 128) * scale;
       renderDeck();
@@ -62,12 +68,12 @@ export default function CardsPage() {
     layout.current = renderDeck;
     measureDeck();
     const resizeObserver = new ResizeObserver(measureDeck);
-    const element = deckRef.current;
     const wheel = event => {
       if (interaction.current.drag || (!event.shiftKey && Math.abs(event.deltaX) <= Math.abs(event.deltaY))) return;
       event.preventDefault();
       interaction.current.pauseUntil = performance.now() + 2500;
       cancelAnimationFrame(settleFrame.current);
+      interaction.current.coasting = false;
       const units = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1;
       position.current += (event.deltaX || event.deltaY) * units / geometry.current.spacing;
       renderDeck();
@@ -80,6 +86,7 @@ export default function CardsPage() {
     let previousTime;
     const entranceDuration = 2600;
     const drift = now => {
+      if (disposed || !element.isConnected) return;
       const elapsed = previousTime === undefined ? 0 : Math.min(50, now - previousTime);
       previousTime = now;
       if (entranceAngle > 0) {
@@ -90,7 +97,7 @@ export default function CardsPage() {
       }
       const state = interaction.current;
       const keyboardFocus = element?.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
-      if (!reducedMotion.matches && !document.hidden && !state.drag && !state.hover && !keyboardFocus && now > state.pauseUntil) {
+      if (!reducedMotion.matches && !document.hidden && !state.drag && !state.coasting && !state.hover && !keyboardFocus && now > state.pauseUntil) {
         position.current += elapsed / 60000; // One card per minute.
         renderDeck();
       }
@@ -98,6 +105,7 @@ export default function CardsPage() {
     };
     driftFrame = requestAnimationFrame(drift);
     return () => {
+      disposed = true;
       cancelAnimationFrame(driftFrame);
       resizeObserver.disconnect();
       element?.removeEventListener('wheel', wheel);
@@ -133,23 +141,119 @@ export default function CardsPage() {
     if (event.type === 'lostpointercapture' && event.target !== event.currentTarget) return;
     interaction.current.drag = null;
     interaction.current.pauseUntil = performance.now() + 2500;
-    deckRef.current.dataset.dragging = 'false';
+    if (deckRef.current) deckRef.current.dataset.dragging = 'false';
     if (!interaction.current.moved) return;
     const from = position.current;
-    const to = Math.round(from);
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      position.current = to;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const cancelled = event.type === 'pointercancel' || event.type === 'lostpointercapture';
+    const samples = drag.samples;
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const duration = last.time - first.time;
+    // Release speed comes from the recent gesture, not the whole drag or the
+    // selected card. A pause before letting go should stop the momentum.
+    const velocity = !cancelled && !reducedMotion && duration > 0 && performance.now() - last.time < 100
+      ? Math.max(-.018, Math.min(.018, (first.x - last.x) / duration / geometry.current.spacing))
+      : 0;
+    if (reducedMotion || cancelled) {
+      interaction.current.coasting = false;
+      if (!cancelled) position.current = Math.round(from);
       layout.current?.();
       return;
     }
-    const start = performance.now();
-    const settle = now => {
-      const progress = Math.min(1, (now - start) / 240);
-      position.current = from + (to - from) * (1 - Math.pow(1 - progress, 3));
-      layout.current?.();
-      if (progress < 1) settleFrame.current = requestAnimationFrame(settle);
+
+    interaction.current.coasting = true;
+    const snap = () => {
+      const origin = position.current;
+      const target = Math.round(origin);
+      const start = performance.now();
+      const settle = now => {
+        const progress = Math.min(1, (now - start) / 220);
+        position.current = origin + (target - origin) * (1 - Math.pow(1 - progress, 3));
+        layout.current?.();
+        if (progress < 1) settleFrame.current = requestAnimationFrame(settle);
+        else {
+          interaction.current.coasting = false;
+          interaction.current.pauseUntil = now + 2500;
+        }
+      };
+      settleFrame.current = requestAnimationFrame(settle);
     };
-    settleFrame.current = requestAnimationFrame(settle);
+    if (Math.abs(velocity) < .0003) { snap(); return; }
+    const start = performance.now();
+    const friction = 300;
+    const coast = now => {
+      const decay = Math.exp(-(now - start) / friction);
+      position.current = from + velocity * friction * (1 - decay);
+      layout.current?.();
+      if (Math.abs(velocity * decay) > .00012) settleFrame.current = requestAnimationFrame(coast);
+      else snap();
+    };
+    settleFrame.current = requestAnimationFrame(coast);
+  };
+
+  const centerSelectedCard = (card, keyboard = false) => {
+    const index = deck.indexOf(card);
+    if (index < 0) return;
+    cancelAnimationFrame(settleFrame.current);
+    interaction.current.drag = null;
+    interaction.current.moved = false;
+    if (deckRef.current) deckRef.current.dataset.dragging = 'false';
+    const from = position.current;
+    const distance = wrap(index - from + deck.length / 2, deck.length) - deck.length / 2;
+    const target = from + distance;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      position.current = target;
+      interaction.current.coasting = false;
+      interaction.current.pauseUntil = performance.now() + 2500;
+      layout.current?.();
+      if (keyboard) buttons.current[index]?.focus({ preventScroll: true });
+      return;
+    }
+    interaction.current.coasting = true;
+    const start = performance.now();
+    const duration = Math.min(1300, 450 + Math.abs(distance) * 55);
+    const rotate = now => {
+      const progress = Math.min(1, (now - start) / duration);
+      position.current = from + distance * (1 - Math.pow(1 - progress, 3));
+      layout.current?.();
+      if (progress < 1) settleFrame.current = requestAnimationFrame(rotate);
+      else {
+        interaction.current.coasting = false;
+        interaction.current.pauseUntil = now + 2500;
+        if (keyboard) buttons.current[index]?.focus({ preventScroll: true });
+      }
+    };
+    settleFrame.current = requestAnimationFrame(rotate);
+  };
+
+  const startDrag = event => {
+    if (event.button !== 0 || interaction.current.drag) return;
+    cancelAnimationFrame(settleFrame.current);
+    interaction.current.coasting = false;
+    interaction.current.moved = false;
+    interaction.current.drag = {
+      pointerId: event.pointerId, x: event.clientX, position: position.current,
+      samples: [{ x: event.clientX, time: performance.now() }],
+    };
+  };
+
+  const moveDrag = event => {
+    const drag = interaction.current.drag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const now = performance.now();
+    drag.samples.push({ x: event.clientX, time: now });
+    while (drag.samples.length > 2 && drag.samples[1].time < now - 100) drag.samples.shift();
+    const delta = drag.x - event.clientX;
+    if (Math.abs(delta) > 8) {
+      interaction.current.moved = true;
+      event.currentTarget.dataset.dragging = 'true';
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    if (interaction.current.moved) {
+      position.current = drag.position + delta / geometry.current.spacing;
+      layout.current?.();
+    }
   };
 
   return (
@@ -161,9 +265,9 @@ export default function CardsPage() {
         <div className={styles.deck} ref={deckRef} role="group" aria-label="Tarot deck. Swipe or use left and right arrow keys to browse. Select three cards."
           onPointerEnter={event => { if (event.pointerType === 'mouse') interaction.current.hover = true; }}
           onPointerLeave={event => { if (event.pointerType === 'mouse') interaction.current.hover = false; }}
-          onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); interaction.current.pauseUntil = performance.now() + 2500; cancelAnimationFrame(settleFrame.current); position.current = Math.round(position.current) + (event.key === 'ArrowRight' ? 1 : -1); layout.current?.(); } }}
-          onPointerDown={event => { if (event.button !== 0 || interaction.current.drag) return; cancelAnimationFrame(settleFrame.current); interaction.current.moved = false; interaction.current.drag = { pointerId: event.pointerId, x: event.clientX, position: position.current }; }}
-          onPointerMove={event => { const drag = interaction.current.drag; if (!drag || event.pointerId !== drag.pointerId) return; const delta = drag.x - event.clientX; if (Math.abs(delta) > 8) { interaction.current.moved = true; event.currentTarget.dataset.dragging = 'true'; if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId); } if (interaction.current.moved) { position.current = drag.position + delta / geometry.current.spacing; layout.current?.(); } }}
+          onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); interaction.current.pauseUntil = performance.now() + 2500; cancelAnimationFrame(settleFrame.current); interaction.current.coasting = false; position.current = Math.round(position.current) + (event.key === 'ArrowRight' ? 1 : -1); layout.current?.(); } }}
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
           onPointerUp={finishDrag}
           onPointerCancel={finishDrag}
           onLostPointerCapture={finishDrag}
@@ -177,22 +281,20 @@ export default function CardsPage() {
         </div>
         <div className={styles.selectionProgress} data-started={selectionStarted} data-count={selectedCards.length} role="status" aria-live="polite" aria-label="Card selection">
           <p className={styles.instruction} aria-hidden="true">Select 3 cards</p>
-          <div className={styles.progressSymbols} aria-hidden="true">
+          <div className={styles.progressSymbols}>
             {[0, 1, 2].map(index => (
-              <span key={index} className={styles.progressSymbol} data-filled={index < selectedCards.length}>
-                <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
-                  <defs>
-                    <linearGradient id={`selection-orb-${index}`} x1={index === 1 ? '4' : '26'} y1="4" x2="8" y2="29" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#fff" /><stop offset=".4" stopColor="#aaa" /><stop offset=".65" stopColor="#333" /><stop offset="1" stopColor="#eee" />
-                    </linearGradient>
-                    <clipPath id={`selection-clip-${index}`}><circle cx="16" cy="16" r="11.5" /></clipPath>
-                  </defs>
-                  <g clipPath={`url(#selection-clip-${index})`}>
-                    <rect className={styles.symbolFill} x="4" y="4" width="24" height="24" fill={`url(#selection-orb-${index})`} />
-                  </g>
-                  <circle className={styles.symbolRing} cx="16" cy="16" r="12" stroke="currentColor" strokeWidth=".7" />
-                  <path className={styles.symbolStar} d="M16 10Q16.5 15.5 22 16Q16.5 16.5 16 22Q15.5 16.5 10 16Q15.5 15.5 16 10Z" fill="white" />
-                </svg>
+              <span key={index} className={styles.progressSlot}>
+              <button type="button" className={styles.progressSymbol} data-filled={index < selectedCards.length}
+                disabled={index >= selectedCards.length} aria-label={`Go to selected card ${index + 1}`}
+                onClick={event => centerSelectedCard(selectedCards[index], event.detail === 0)}>
+
+                <GlassDot filled={index < selectedCards.length} index={index} />
+              </button>
+              {index < selectedCards.length && <button type="button" className={styles.removeSelection}
+                aria-label={`Unselect card ${selectedCards[index]}`}
+                onClick={() => setSelectedCards(previous => previous.filter(card => card !== selectedCards[index]))}>
+                <svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg>
+              </button>}
               </span>
             ))}
           </div>

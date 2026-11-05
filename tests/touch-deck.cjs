@@ -28,6 +28,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
       for (let step = 1; step <= 12; step++) {
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: from + (to - from) * step / 12, y, id: 1 }] });
         if (checkContinuous) {
+          await page.evaluate(() => new Promise(requestAnimationFrame));
           const sample = await selected.evaluate(element => ({ same: window.__selectedCard === element, pressed: element.ariaPressed, lift: getComputedStyle(element.firstElementChild).translate, x: element.getBoundingClientRect().x }));
           assert.equal(sample.same, true); assert.equal(sample.pressed, 'true'); assert.equal(sample.lift, '0px -24px');
           assert.ok(sample.x <= lastX + 1 && lastX - sample.x < 24, 'Native touch must continue smoothly after capture transfers from card to deck');
@@ -39,7 +40,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
       for (const card of await page.getByRole('button', { name: /^Card / }).evaluateAll(elements => elements.map(element => element.ariaLabel))) seen.add(card);
     };
     await swipe(210, 25, true);
-    assert.ok((await selected.boundingBox()).x < beforeX - 90, 'A swipe must reveal the next cards');
+    assert.ok(await selected.evaluate(element => element.getBoundingClientRect().x) < beforeX - 90, 'A swipe must reveal the next cards');
     for (let index = 0; index < 4; index++) await swipe(280, 30);
     await swipe(50, 290);
     assert.ok(seen.size >= 10, `Expected new cards after repeated swipes; saw ${seen.size}`);

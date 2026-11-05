@@ -2,13 +2,19 @@
 .topheading { font: 200 clamp(32px, 8vw, 40px) var(--font-luxury); max-width: 560px; margin: auto; }
 .explanation { font-size: 16px; line-height: 1.3; font-style: italic; margin: 16px 0 6px; }
 .explanation span { display: block; }
-.bubblesContainer { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; max-width: 350px; margin: auto; padding-top: 30px; }
-.bubble { position: relative; isolation: isolate; overflow: hidden; aspect-ratio: 1; border-radius: 50%; border: 1px solid #ffffffc9; background: transparent; color: white; font: italic 16px var(--font-sabon); cursor: pointer; animation: bubble-enter .35s cubic-bezier(.2,.8,.2,1) var(--delay) both; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+.personalityField { display: flex; flex: 1; align-items: center; justify-content: center; padding: 28px 0; }
+.bubblesContainer { position: relative; container-type: inline-size; width: min(100%, 420px); aspect-ratio: 1; flex-shrink: 0; }
+.bubblesContainer::before { content: ''; position: absolute; inset: 12.5%; border: 1px solid #ffffff0d; border-radius: 50%; pointer-events: none; }
+.bubbleSlot { position: absolute; width: 25%; aspect-ratio: 1; transform: translate(-50%, -50%); }
+.centerSphere { position: absolute; left: 50%; top: 50%; width: 31%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
+.miniSphere { display: block; width: 100%; height: 100%; overflow: visible; }
+.bubble { position: relative; display: grid; place-items: center; width: 100%; height: 100%; padding: 2px; isolation: isolate; overflow: hidden; aspect-ratio: 1; border-radius: 50%; border: 1px solid #ffffffc9; background: transparent; color: white; font: italic clamp(11px, 4cqw, 15px) var(--font-sabon); cursor: pointer; animation: bubble-enter .35s cubic-bezier(.2,.8,.2,1) var(--delay) both; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
 .bubble::before { content: ''; position: absolute; z-index: -2; inset: 0; background: radial-gradient(circle at var(--light-x) var(--light-y), #ffffffc9, transparent 58%), linear-gradient(var(--angle), #bbb, #252525 50%, #929292); opacity: .15; transition: opacity .25s ease; }
 .bubble::after { content: ''; position: absolute; z-index: -1; inset: 0; background: url('/noise.svg'); opacity: .12; }
-.bubble:hover, .bubble:focus-visible { transform: scale(1.055); border-color: white; box-shadow: 0 0 0 4px #ffffff1a; }
+.bubble:hover, .bubble:focus-visible { transform: scale(1.035); border-color: white; box-shadow: 0 0 0 4px #ffffff1a; }
 .bubble:hover::before, .bubble:focus-visible::before { opacity: .75; }
 .filled { border-color: white; box-shadow: 0 0 0 3px #ffffff8c; }
 .filled::before { opacity: 1; }
 @keyframes bubble-enter { from { opacity: 0; translate: 0 16px; scale: .9; } to { opacity: 1; translate: 0 0; scale: 1; } }
-@media (max-width: 350px) { .bubble { font-size: 14px; } .bubblesContainer { gap: 9px; } .explanation { font-size: 14px; } }
+@media (max-width: 350px) { .explanation { font-size: 14px; } }
+@media (max-height: 700px) { .personalityField { padding-block: 20px; } .bubblesContainer { width: min(100%, max(260px, calc(100svh - 320px))); } }
