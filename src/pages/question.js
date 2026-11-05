@@ -1,57 +1,65 @@
-import { useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
-import styles from '../styles/question.module.css'; 
+import WizardLayout, { PageAction } from '@/components/WizardLayout';
+import { validateQuestionInput } from '@/lib/tarotValidation.mjs';
+import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED } from '@/lib/oracleAvailability.mjs';
+import styles from '@/styles/question.module.css';
 
 export default function QuestionPage() {
   const router = useRouter();
-  const { adjectives } = router.query; // Get adjectives from query
   const [question, setQuestion] = useState('');
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => {
+    let active = true;
+    const fitText = () => {
+      const input = inputRef.current;
+      if (!active || !input) return;
+      input.style.height = '0px';
+      input.style.height = `${input.scrollHeight}px`;
+    };
+    fitText();
+    document.fonts.ready.then(fitText);
+    window.addEventListener('resize', fitText);
+    return () => { active = false; window.removeEventListener('resize', fitText); };
+  }, [question]);
 
-  // For changes in input field, saved to UseState, then sent with next Link to next page 
-  const handleChange = (e) => setQuestion(e.target.value);
+  useEffect(() => {
+    if (router.isReady && typeof router.query.question === 'string') setQuestion(router.query.question);
+  }, [router.isReady, router.query.question]);
 
-   // Function to handle the Enter key press
-   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && question) {
-      // Prevent the default behavior of adding a new line
-      e.preventDefault();
-      // Navigate to the cards page
-      router.push({ pathname: '/cards', query: { question, adjectives } });
-    }
+  const submit = async () => {
+    if (checking) return;
+    const result = validateQuestionInput(question);
+    if (!result.ok) { setError(result.error); inputRef.current?.focus(); return; }
+    setChecking(true); setError('');
+    const continueToCards = oracleStatus => router.push({ pathname: '/cards', query: {
+      question: result.question, adjectives: router.query.adjectives,
+      ...(oracleStatus ? { oracleStatus } : {}),
+    } });
+    try {
+      const response = await fetch('/api/validate-question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: result.question }) });
+      if (response.status >= 500 || response.status === 429) {
+        const data = await response.json().catch(() => ({}));
+        await continueToCards(data.code === ORACLE_CREDITS_EXHAUSTED ? ORACLE_CREDITS_EXHAUSTED : ORACLE_UNAVAILABLE);
+        return;
+      }
+      const data = await response.json();
+      if (!response.ok || data.valid !== true) { setError(data.error || 'Please ask a question for a tarot reading.'); return; }
+      await continueToCards();
+    } catch { await continueToCards(ORACLE_UNAVAILABLE); }
+    finally { setChecking(false); }
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.background}>
-        <img src="/questionBackground.png" alt="Background" className={styles.backgroundImage} />
+    <WizardLayout back={{ pathname: '/prequestion', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(question ? { question } : {}) } }} action={<PageAction disabled={!question.trim() || checking} onClick={submit}>{checking ? 'Checking…' : 'Confirm'}</PageAction>}>
+      <h1 className={styles.title}>What is your question?</h1>
+      <div className={styles.writingArea}>
+        <textarea data-autofocus ref={inputRef} aria-label="Your tarot question" aria-describedby={error ? 'question-error' : undefined} aria-invalid={!!error} value={question} maxLength={400} rows={1} className={styles.input} placeholder="Write your question…" onChange={event => { setQuestion(event.target.value); setError(''); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
+        {error && <p id="question-error" role="alert" className={styles.error}>{error}</p>}
       </div>
-
-      <header className={styles.header}>
-        <Link href="/prequestion">
-          <img src="/backButton.png" alt="Button" className={styles.headerButton} />
-        </Link>
-        <h1 className={styles.headerheading}>LIGAORACLE</h1>
-      </header>
-
-      <div className={styles.topSection}>
-        <h1 className={styles.topheading}>What is your question?</h1>
-        <h1 className={styles.explanation}> Keep it short for the best result.</h1>
-      </div>
-
-      <textarea
-        value={question}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Enter your question here."
-        className={styles.input}
-      />
-
-      <Link href={{ pathname: '/cards', query: { question, adjectives } }}>
-        <button className={styles.submitButton} disabled={!question}>
-          Confirm
-        </button>
-      </Link>
-    </div>
+    </WizardLayout>
   );
 }

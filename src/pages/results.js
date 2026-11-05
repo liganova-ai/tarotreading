@@ -1,7 +1,13 @@
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { disposePreparedReadingAudio, ensurePreparedReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import useNarration from '@/hooks/useNarration';
 import { useRouter } from 'next/router';
-import Link from 'next/link';
+import BackControl from '@/components/BackControl';
+import WizardLayout, { PageAction } from '@/components/WizardLayout';
+import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
+import { validateReadingInput } from '@/lib/tarotValidation.mjs';
 import styles from '../styles/results.module.css';
 
 const cardNames = {
@@ -170,75 +176,43 @@ const cardDescriptions = {
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { question, cards, adjectives } = router.query;
+  const { question, cards, adjectives, oracleStatus } = router.query;
   const [prediction, setPrediction] = useState('');
-  const [paragraphs, setParagraphs] = useState([]); // split long prediction into paragraphs, save to array 
+  const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isFetchingAudio, setIsFetchingAudio] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isAudioFetched, setIsAudioFetched] = useState(false);
-  const audioRef = useRef(null);
+  const [availability, setAvailability] = useState('');
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+  const [focusGeometry, setFocusGeometry] = useState({ x: 0, y: 0, scale: 1, detailsTop: 0 });
+  const reducedMotion = useReducedMotion();
+  const cardButtons = useRef([]);
   const isFetchingRef = useRef(false); // useRef: does not trigger re-render, to check if Prediciton is being fetched from API Endpoint
 
   const modalRef = useRef(null);
-  const parsedCards = cards ? JSON.parse(cards) : [];
+  const parseArray = value => { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
+  const parsedCards = parseArray(cards);
 
-  const handleSpeakClick = async () => {
-    if (isAudioFetched && audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-      return;
-    }
+  useEffect(() => {
+    ensurePreparedReadingAudio();
+  }, []);
 
-    try {
-      setIsFetchingAudio(true);
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: prediction }),
-      });
+  const narration = useNarration(segments, !!prediction && !availability);
 
-      if (!response.ok) throw new Error('Audio generation failed');
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.load();
-        audioRef.current.play();
-        setIsAudioFetched(true);
-        setIsPlaying(true);
-      }
-
-      audioRef.current.onplaying = () => {
-        setIsFetchingAudio(false);
-        setIsPlaying(true);
-      };
-      audioRef.current.onpause = () => setIsPlaying(false);
-      audioRef.current.onended = () => setIsPlaying(false);
-
-    } catch (err) {
-      console.error('Error fetching TTS:', err);
-      setIsFetchingAudio(false);
-    }
-  };
-  
-  
   useEffect(() => {
     if (!router.isReady || !question || !cards || !adjectives) {
       return;
     }
 
-    const parsedAdjectives = JSON.parse(adjectives);
-    if (!Array.isArray(parsedCards) || !Array.isArray(parsedAdjectives)) {
+    const parsedAdjectives = parseArray(adjectives);
+    const input = validateReadingInput({ question, cards: parsedCards, adjectives: parsedAdjectives });
+    if (!input.ok) {
+      setError(input.error);
+      setLoading(false);
+      return;
+    }
+    if (oracleStatus === ORACLE_UNAVAILABLE || oracleStatus === ORACLE_CREDITS_EXHAUSTED) {
+      setAvailability(oracleAvailabilityMessage(oracleStatus));
+      setLoading(false);
       return;
     }
 
@@ -249,20 +223,21 @@ export default function ResultsPage() {
     const fetchPrediction = async () => {
       isFetchingRef.current = true;
       setLoading(true);
-      console.log("post req @ openai:", question, cards, adjectives)
       try {
         const response = await axios.post('/api/predict', {
           question,
           cards: parsedCards,
           adjectives: parsedAdjectives,
         });
-        setTimeout(() => {
-          setPrediction(response.data.prediction);
-          setParagraphs(response.data.prediction.split('\n'));
-          setLoading(false);
-        }, 5000);
+        setPrediction(response.data.prediction);
+        setSegments(response.data.segments);
+        setLoading(false);
       } catch (err) {
-        setError('Failed to fetch prediction. Please try again.');
+        if (!err.response || err.response.status >= 500 || err.response.status === 429) {
+          setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
+        } else {
+          setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');
+        }
         setLoading(false);
       } finally {
         isFetchingRef.current = false;
@@ -270,158 +245,164 @@ export default function ResultsPage() {
     };
 
     fetchPrediction();
-  }, [router.isReady, question, cards, adjectives]);
+  }, [router.isReady, question, cards, adjectives, oracleStatus]);
 
-  // for Overlay Modal when clicking one Card for further explanation
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        closeModal(); // Close modal if clicked outside
+    if (selectedCardIndex === null) return;
+    modalRef.current?.focus({ preventScroll: true });
+    const dismiss = event => {
+      if (event.type === 'keydown') {
+        if (event.key === 'Escape') { event.preventDefault(); closeModal(); }
+        return;
       }
+      if (!modalRef.current?.contains(event.target) && !event.target.closest('[data-card-selected="true"]')) closeModal();
     };
-  
-    if (selectedCardIndex !== null) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
-  
+    const recenter = () => {
+      const card = cardButtons.current[selectedCardIndex];
+      if (card) setFocusGeometry(measureFocus(card));
+    };
+    window.addEventListener('resize', recenter);
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', dismiss);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', recenter);
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', dismiss);
     };
   }, [selectedCardIndex]);
 
+  useEffect(() => {
+    if (availability || error) disposePreparedReadingAudio();
+  }, [availability, error]);
+
   const closeModal = () => {
+    const previous = selectedCardIndex;
     setSelectedCardIndex(null);
+    requestAnimationFrame(() => cardButtons.current[previous]?.focus({ preventScroll: true }));
   };
 
-  if (loading) return (
+  const measureFocus = element => {
+    const group = element.parentElement;
+    const container = group.parentElement;
+    const targetWidth = Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
+    const scale = targetWidth / element.offsetWidth;
+    return {
+      x: group.clientWidth / 2 - element.offsetLeft - element.offsetWidth / 2,
+      y: container.clientHeight / 2 - group.offsetTop - element.offsetTop - element.offsetHeight / 2,
+      scale,
+      detailsTop: container.clientHeight / 2 + element.offsetHeight * scale / 2 + 28,
+    };
+  };
+
+  const focusCard = (index, element) => {
+    if (selectedCardIndex !== null) { closeModal(); return; }
+    setFocusGeometry(measureFocus(element));
+    setSelectedCardIndex(index);
+  };
+  const cardTransition = { duration: reducedMotion ? 0 : .85, ease: [.22, 1, .36, 1] };
+
+  const backToCards = { pathname: '/cards', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
+  const backToQuestion = { pathname: '/question', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}) } };
+
+  const awaitingSpeech = !!prediction && !availability && !narration.hasStarted && !['ready', 'error'].includes(narration.status);
+
+  if (loading || awaitingSpeech) return (
     <div className={styles.container}>
-      <div className={styles.background}>
-        <img src="/resultsBackground.png" alt="Background" className={styles.backgroundImage} />
-      </div>
 
       <header className={styles.header}>
-        <Link href="/">
-          <img src="/backButton.png" alt="Button" className={styles.headerButton} />
-        </Link>
+        <BackControl href={backToCards} className={styles.headerButton} />
         <h1 className={styles.headerheading}>LIGAORACLE</h1>
       </header>
 
-      <div className={styles.loadingSection}>
+      <div className={styles.loadingSection} role="status" aria-live="polite">
         <div className={styles.loadingCircles}>
-          <div className={styles.circle}><img className={styles.loadingImg} src="/buttonBackground.png" alt="loading-icon" /></div>
-          <div className={styles.circle}><img className={styles.loadingImg} src="/buttonBackground.png" alt="loading-icon" /></div>
-          <div className={styles.circle}><img className={styles.loadingImg} src="/buttonBackground.png" alt="loading-icon" /></div>
-          <div className={styles.circle}><img className={styles.loadingImg} src="/buttonBackground.png" alt="loading-icon" /></div>
-          <div className={styles.circle}><img className={styles.loadingImg} src="/buttonBackground.png" alt="loading-icon" /></div>
+          <div className={styles.circle} />
+          <div className={styles.circle} />
+          <div className={styles.circle} />
+          <div className={styles.circle} />
+          <div className={styles.circle} />
         </div>
         <p className={styles.loadingText}>Your future is being processed...</p>
       </div>
     </div>
   );
 
-  if (error) return <div className={styles.error}>{error}</div>;
+  if (error) return <WizardLayout back={backToQuestion} action={<PageAction onClick={() => router.push(backToQuestion)}>Try again</PageAction>}><p role="alert" className={styles.error}>{error}</p></WizardLayout>;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.background}>
-        <img src="/resultsBackground.png" alt="Background" className={styles.backgroundImage} />
-      </div>
+    <div className={styles.container} data-focused={selectedCardIndex !== null}>
 
       <header className={styles.header}>
-        <Link href="/">
-          <img src="/backButton.png" alt="Button" className={styles.headerButton} />
-        </Link>
+        {selectedCardIndex === null ? <BackControl href={backToCards} className={styles.headerButton} /> : <BackControl onClick={closeModal} className={styles.headerButton} />}
         <h1 className={styles.headerheading}>LIGAORACLE</h1>
       </header>
 
-      <div className={styles.topSection}>
-        <h1 className={styles.topheading}>The cards have spoken</h1>
-      </div>
-
-      {/* Main content, hidden when overlay modal for card explanation is open (when a Card was selected by user) */}
-      {selectedCardIndex === null && (
-          <>
-            <div className={styles.cardsSection}>
+            <div className={styles.cardsSection} role="group" aria-label="Your tarot cards">
               {parsedCards.map((cardNumber, index) => (
-                <div key={index} className={styles.cardContainer} onClick={() => setSelectedCardIndex(index)}>
+                <motion.button type="button" key={cardNumber} ref={element => { cardButtons.current[index] = element; }} className={styles.cardContainer}
+                  initial={false}
+                  animate={selectedCardIndex === null
+                    ? { x: 0, y: index === 1 ? -14 : 7, rotate: (index - 1) * 7, scale: 1, opacity: 1 }
+                    : selectedCardIndex === index
+                      ? { x: focusGeometry.x, y: focusGeometry.y, rotate: 0, scale: focusGeometry.scale, opacity: 1 }
+                      : { x: index < selectedCardIndex ? '-100vw' : '100vw', y: 28, rotate: index < selectedCardIndex ? -24 : 24, scale: .92, opacity: 0 }}
+                  transition={cardTransition}
+                  data-card-selected={selectedCardIndex === index}
+                  data-speaking={selectedCardIndex === null && (narration.activeCard === index || narration.activeCard === -1)}
+                  aria-expanded={selectedCardIndex === index}
+                  disabled={selectedCardIndex !== null && selectedCardIndex !== index}
+                  aria-label={`Explore ${cardNames[cardNumber]}`} onClick={event => focusCard(index, event.currentTarget)}>
                   <img
                     src={`/cards/Card ${cardNumber}.jpg`}
                     alt={`Card ${cardNumber}`}
                     className={styles.cardImage}
                   />
-                </div>
+                </motion.button>
               ))}
             </div>
 
           <div className={styles.predictionSection}>
-            <button onClick={handleSpeakClick} className={styles.button}>
-            <img
-              src={
-                isFetchingAudio ? "/bouncing-circles.svg" :
-                isPlaying ? "/PauseButton.png" :
-                isAudioFetched ? "/PlayButton.png" :
-                "/SpeakButton.png"
-              }
-              className={styles.speakButton}
-              alt="Speak Button"
-            />
-            </button>
-            <audio ref={audioRef}/>
-            <div className={styles.predictionTextContainer}>
-            {paragraphs.map((paragraph, index) => (
-              <p key={index} className={styles.predictionText}>{paragraph}</p>
+            <motion.div className={styles.readingContent} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
+              animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
+              transition={{ duration: reducedMotion ? 0 : .6, ease: [.22, 1, .36, 1] }}>
+            {!availability && <>
+              <div className={styles.playbackControls}>
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label="Previous card">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg>
+              </button>
+              <button type="button" onClick={narration.toggle} className={styles.button} disabled={narration.status === 'loading'} aria-label={narration.isPlaying ? 'Pause reading' : narration.status === 'loading' ? 'Preparing narration' : 'Play reading'}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={narration.status === 'loading' ? styles.voiceSpinner : undefined}>
+                  {narration.status === 'loading'
+                    ? <circle cx="12" cy="12" r="7" strokeDasharray="28 16" />
+                    : narration.isPlaying
+                      ? <path d="M9 6v12M15 6v12" />
+                      : <path d="m9 5 10 7-10 7Z" />}
+                </svg>
+              </button>
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.next} disabled={!narration.canNext} aria-label="Next card">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg>
+              </button>
+              </div>
+              {narration.status === 'error' && <p className={styles.audioHint}>The oracle’s voice is resting.</p>}
+            </>}
+            <div className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
+            {availability ? <p>{availability}</p> : segments.map((segment, index) => (
+              <p key={index} className={styles.predictionText} data-speaking={narration.activeCard === segment.cardIndex}>{segment.text}</p>
             ))}
           </div>
+            </motion.div>
+            <AnimatePresence>
+              {selectedCardIndex !== null && <motion.section key="card-explanation" className={styles.cardDetails} style={{ top: focusGeometry.detailsTop }}
+                ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="card-explanation-title" tabIndex={-1}
+                initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 32 }}
+                transition={{ duration: reducedMotion ? 0 : .55, delay: reducedMotion ? 0 : .16, ease: [.22, 1, .36, 1] }}>
+                <h2 id="card-explanation-title" className={styles.detailTitle}>{cardNames[parsedCards[selectedCardIndex]]}</h2>
+                <p className={styles.cardDescription}>{cardDescriptions[parsedCards[selectedCardIndex]]}</p>
+              </motion.section>}
+            </AnimatePresence>
           </div>
 
-          <Link href="/">
-            <button className={styles.returnButton}>Restart</button>
-          </Link>
-        </>
-      )}
-
-
-      {selectedCardIndex !== null && (
-        <div className={styles.modal}>
-          <div className={styles.background}>
-            <img src="/resultsBackground.png" alt="Background" className={styles.backgroundImage} />
-          </div>
-          
-          <header className={styles.header}>
-            
-              <img src="/backButton.png" alt="Button" className={styles.headerButton} onClick={closeModal} />
-           
-            <h1 className={styles.headerheading}>LIGAORACLE</h1>
-          </header>
-
-              <div className={styles.topSection}>
-                <h1 className={styles.topheading}>What each card means</h1>
-              </div>
-              <div className={styles.modalContent}>
-            <div className={styles.modalCard} ref={modalRef}>
-              <img
-                src={`/cards/Card ${parsedCards[selectedCardIndex]}.jpg`}
-                alt={`Card ${parsedCards[selectedCardIndex]}`}
-                className={styles.largeCardImage}
-              />
-            </div>
-
-            
-              <p className={styles.cardDescription}>
-                {cardDescriptions[parsedCards[selectedCardIndex]]}
-              </p>
-              
-            
-          </div>
-
-
-
-        </div>
-      )}
-
-
+          <PageAction disabled={selectedCardIndex !== null} onClick={() => router.push('/')}>Ask another question</PageAction>
     </div>
   );
 }
