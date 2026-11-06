@@ -1,26 +1,25 @@
 import { translateTexts } from './translateTexts.mjs';
 const completed = new Map();
 const pending = new Map();
-const prefix = 'oracle-reading-v1:';
 export const readingQuestionKey = question => question.trim().replace(/\s+/g, ' ').toLowerCase();
 
-function getBaseReading(question) {
-  const key = readingQuestionKey(question);
+function getBaseReading(question, processId) {
+  const key = processId || readingQuestionKey(question);
   if (completed.has(key)) return completed.get(key);
 
   return null;
 }
 
-export function getSavedReading(question, language) {
-  const base = getBaseReading(question);
+export function getSavedReading(question, language, processId) {
+  const base = getBaseReading(question, processId);
   if (!base || !language || (base.language || 'en') === language) return base;
   return base.translations?.[language] || null;
 }
 
 export async function getOrCreateReading(input, generate, translate = translateTexts) {
-  const key = readingQuestionKey(input.question);
+  const key = input.processId || readingQuestionKey(input.question);
   const language = input.language || 'en';
-  let base = getBaseReading(input.question);
+  let base = getBaseReading(input.question, input.processId);
   if (!base) {
     if (!pending.has(key)) {
       const request = Promise.resolve().then(() => generate(input)).then(result => {

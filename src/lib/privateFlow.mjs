@@ -7,7 +7,7 @@ export const privateFlow = {
   snapshot() { return state; },
   save(path, query = {}) {
     const clean = {};
-    for (const key of ['question', 'cards', 'adjectives', 'oracleStatus']) {
+    for (const key of ['question', 'cards', 'adjectives', 'oracleStatus', 'processId']) {
       if (typeof query[key] === 'string' && query[key].length <= 1024) clean[key] = query[key];
     }
     state = { ...state, [path]: clean };

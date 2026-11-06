@@ -8,12 +8,12 @@ export function savedTranslation(texts, language) {
 
   return null;
 }
-export function translateTexts(texts, language, fromEnglish = false) {
+export function translateTexts(texts, language, fromEnglish = false, processId) {
   const key = keyFor(texts, language);
   const cached = fromEnglish ? savedTranslation(texts, language) : memory.get(key);
   if (cached) return Promise.resolve(cached);
   if (pending.has(key)) return pending.get(key);
-  const promise = fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texts, language }) })
+  const promise = fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texts, language, processId }) })
     .then(async response => {
       if (!response.ok) throw new Error('Translation unavailable. Please try again.');
       const result = await response.json();

@@ -29,7 +29,7 @@ export async function proxy(request) {
   let response;
   if (path === '/access' && allowed) response = NextResponse.redirect(new URL('/disclaimer', request.url));
   else if (path.startsWith('/api/') && !['/api/access', '/api/logout'].includes(path) && !allowed) {
-    response = NextResponse.json({ error: 'Please enter the oracle password to continue.' }, { status: 401 });
+    response = NextResponse.json({ error: 'Please enter your access code to continue.' }, { status: 401 });
   } else if (privatePages.has(path) && !allowed) response = NextResponse.redirect(new URL('/access', request.url));
   else response = NextResponse.next({ request: { headers } });
   response.headers.set('Content-Security-Policy', csp);

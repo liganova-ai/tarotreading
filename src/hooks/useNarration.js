@@ -4,7 +4,7 @@ import { takeReadingAudio, MUSIC_INTRO_MS, MUSIC_LEVEL, MUSIC_UNDER_VOICE, MUSIC
 
 const SPOKEN_WELCOME = 'Welcome to the oracle. Here is your personal tarot reading. Take a quiet breath, and let the cards guide you.';
 
-export default function useNarration(segments, enabled) {
+export default function useNarration(segments, enabled, processId) {
   const { t } = useLanguage();
   const [status, setStatus] = useState('idle');
   const [hasStarted, setHasStarted] = useState(false);
@@ -24,9 +24,9 @@ export default function useNarration(segments, enabled) {
     setStatus('loading');
 
     const spokenSegments = [{ cardIndex: -2, text: t(SPOKEN_WELCOME) }, ...segments];
-    const clips = spokenSegments.map(async segment => {
+    const clips = spokenSegments.map(async (segment, index) => {
       try {
-        const response = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
+        const response = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ processId, segmentIndex: index - 1 }), signal: controller.signal });
         if (!response.ok) throw new Error('Speech unavailable');
         const blob = await response.blob();
         if (session.disposed) return {};
@@ -155,7 +155,7 @@ export default function useNarration(segments, enabled) {
       urls.forEach(url => URL.revokeObjectURL(url));
       if (sessionRef.current === session) sessionRef.current = null;
     };
-  }, [segments, enabled, attempt, t]);
+  }, [segments, enabled, attempt, t, processId]);
 
   const toggle = async () => {
     const session = sessionRef.current;

@@ -261,8 +261,8 @@ export default function CardsPage() {
   };
 
   return (
-    <WizardLayout back={{ pathname: '/question', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(router.query.question ? { question: router.query.question } : {}) } }} className={styles.page} action={
-      <PageAction disabled={selectedCards.length !== 3} onClick={() => { prepareReadingAudio(); router.push({ pathname: '/results', query: { question: router.query.question, cards: JSON.stringify(selectedCards), adjectives: router.query.adjectives, ...(router.query.oracleStatus ? { oracleStatus: router.query.oracleStatus } : {}) } }); }}>{t("Ask the oracle")}</PageAction>
+    <WizardLayout back={{ pathname: '/question', query: { processId: router.query.processId, ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(router.query.question ? { question: router.query.question } : {}) } }} className={styles.page} action={
+      <PageAction disabled={selectedCards.length !== 3} onClick={() => { prepareReadingAudio(); router.push({ pathname: '/results', query: { processId: router.query.processId, question: router.query.question, cards: JSON.stringify(selectedCards), adjectives: router.query.adjectives, ...(router.query.oracleStatus ? { oracleStatus: router.query.oracleStatus } : {}) } }); }}>{t("Ask the oracle")}</PageAction>
     }>
       <h1 className={styles.title}>{t("The future is in your hands")}</h1>
       <div className={styles.deckArea}>

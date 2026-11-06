@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright');
 (async () => {
   const base = process.env.ORACLE_TEST_URL || 'http://127.0.0.1:3001';
-  assert.ok(process.env.ORACLE_TEST_PASSWORD, 'An explicit test password is required');
+  assert.ok(process.env.ORACLE_TEST_CODE, 'An explicit test access code is required');
   const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -18,7 +18,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
     } }));
     await page.route('**/api/tts', route => route.fulfill({ status: 503, json: { error: 'Test narration disabled' } }));
     await page.goto(base + '/access');
-    await page.getByLabel('Your password', { exact: true }).fill(process.env.ORACLE_TEST_PASSWORD);
+    await page.getByLabel('Access code', { exact: true }).fill(process.env.ORACLE_TEST_CODE);
     await page.getByRole('button', { name: 'Enter the oracle', exact: true }).click();
     await page.waitForURL('**/disclaimer');
     const cookies = await context.cookies();

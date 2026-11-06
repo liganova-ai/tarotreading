@@ -3,8 +3,8 @@ const { createHmac } = require('node:crypto');
 
 (async () => {
   const base = process.env.ORACLE_TEST_URL || 'http://127.0.0.1:3001';
-  const password = process.env.ORACLE_TEST_PASSWORD;
-  if (!password) throw new Error('Set ORACLE_TEST_PASSWORD to the test server password.');
+  const password = process.env.ORACLE_TEST_CODE;
+  if (!password) throw new Error('Set ORACLE_TEST_CODE to the test access code.');
   const expiry = Math.floor(Date.now() / 1000) + 3600;
   const expired = `1.${createHmac('sha256', password).update('1').digest('hex')}`;
   const routes = {
@@ -29,14 +29,14 @@ const { createHmac } = require('node:crypto');
       const response = await fetch(`${base}/api/${route}${variant.query || ''}`, {
         method: 'POST', headers: { 'content-type': 'application/json', ...variant.headers }, body: JSON.stringify({ ...body, password: 'not-a-session' }),
       });
-      assert.equal(response.status, 401, `${route}: direct request must require a signed password session`);
+      assert.equal(response.status, 401, `${route}: direct request must require an active Gate session`);
       checks++;
     }
     assert.equal((await fetch(`${base}/api/${route}?password=not-a-session`)).status, 401);
     checks++;
   }
-  const login = await fetch(base + '/api/access', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password }) });
-  assert.equal(login.status, 200, 'Password login must remain available');
+  const login = await fetch(base + '/api/access', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code: password }) });
+  assert.equal(login.status, 200, 'Code activation must remain available');
   const cookie = login.headers.get('set-cookie').split(';')[0];
   for (const route of Object.keys(routes)) {
     const allowed = await fetch(base + '/api/' + route, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: '{}' });

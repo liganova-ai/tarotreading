@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/context/Language';
 import { savedTranslation, translateTexts } from '@/lib/translateTexts.mjs';
-export default function useTranslatedTexts(texts) {
+export default function useTranslatedTexts(texts, processId) {
   const { language, t } = useLanguage();
   const key = JSON.stringify(texts);
   const [result, setResult] = useState(null);
@@ -9,11 +9,11 @@ export default function useTranslatedTexts(texts) {
   useEffect(() => {
     if (!texts.length) return;
     let active = true;
-    translateTexts(JSON.parse(key), language, true).then(value => {
+    translateTexts(JSON.parse(key), language, true, processId).then(value => {
       if (active) setResult({ key, language, value });
     }).catch(() => { if (active) setResult({ key, language, error: true }); });
     return () => { active = false; };
-  }, [key, language, attempt]);
+  }, [key, language, attempt, processId]);
   const cached = savedTranslation(texts, language);
   const current = result?.key === key && result.language === language ? result : null;
   return { texts: cached || current?.value || texts.map(() => t('Translating…')), error: current?.error && !cached, retry: () => setAttempt(value => value + 1) };

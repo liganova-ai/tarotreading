@@ -4,6 +4,7 @@ import { createHmac } from 'node:crypto';
 import { ACCESS_COOKIE, ACCESS_DURATION, createAccessToken, readAccessToken, hasOracleAccess } from '../src/lib/oracleAccess.mjs';
 import { requireOracleAccess } from '../src/lib/requireOracleAccess.mjs';
 import { privateHash, safeMutation, clientIdentity } from '../src/lib/oracleSecurity.mjs';
+import { seal } from '../src/lib/privateStore.mjs';
 import { consumeLimits } from '../src/lib/securityStore.mjs';
 
 const secret = 'test-only-independent-session-signing-secret-64-characters-long';
@@ -27,19 +28,22 @@ test('random sessions are independently signed, time-bounded and reject old or f
 
 test('paid handlers require an active, unrevoked session and reject cross-site or non-JSON calls', async () => {
   const saved = {...process.env}; const originalFetch=globalThis.fetch;
-  Object.assign(process.env,{ORACLE_PASSWORD:password,ORACLE_SESSION_SECRET:secret,UPSTASH_REDIS_REST_URL:'https://security.test',UPSTASH_REDIS_REST_TOKEN:'test'});
-  let record=privateHash(`password:${password}`), unavailable=false;
-  globalThis.fetch=async()=>{if(unavailable)throw new Error('Offline');return {ok:true,json:async()=>({result:record})};};
+  Object.assign(process.env,{GATE_APP_KEY:password,ORACLE_SESSION_SECRET:secret,UPSTASH_REDIS_REST_URL:'https://security.test',UPSTASH_REDIS_REST_TOKEN:'test'});
+  const summary={ appId:'app-test',grantId:'grant-test',expiresAt:new Date(Date.now()+7200000).toISOString(),requestLimit:3,used:0,remaining:3 };
+  const token=await createAccessToken(secret);
+  const session=await readAccessToken(token,secret);
+  const pack=version=>seal({gate:{...summary,accessToken:'private-gate-token'},keyVersion:version},`session:${session.id}`);
+  let record=pack(privateHash(`gate-key:${password}`)), unavailable=false;
+  globalThis.fetch=async(url)=>{if(unavailable)throw new Error('Offline');return {ok:true,json:async()=>String(url).includes('/api/v1/')?summary:{result:record}};};
   try {
-    const token=await createAccessToken(secret);
     const valid={method:'POST',headers:{host:'localhost','content-type':'application/json'},cookies:{[ACCESS_COOKIE]:token}};
     for(const req of [{}, {query:{password},body:{password}}, {headers:{authorization:`Bearer ${token}`}}, {cookies:{[ACCESS_COOKIE]:'true'},headers:{'x-middleware-subrequest':'src/middleware:src/middleware:src/middleware:src/middleware:src/middleware'}}]) {
       const res=response(); assert.equal(await requireOracleAccess(req,res),false);assert.equal(res.code,401);
     }
     assert.equal(await requireOracleAccess(valid,response()),true);
     record=null;const revoked=response();assert.equal(await requireOracleAccess(valid,revoked),false);assert.equal(revoked.code,401);
-    record=privateHash('password:old-password');const rotated=response();await requireOracleAccess(valid,rotated);assert.equal(rotated.code,401);
-    record=privateHash(`password:${password}`);
+    record=pack(privateHash('gate-key:old-key'));const rotated=response();await requireOracleAccess(valid,rotated);assert.equal(rotated.code,401);
+    record=pack(privateHash(`gate-key:${password}`));
     for(const headers of [{'sec-fetch-site':'cross-site'},{origin:'https://evil.test'}]){const res=response();await requireOracleAccess({...valid,headers:{...valid.headers,...headers}},res);assert.equal(res.code,403);}
     const form=response();await requireOracleAccess({...valid,headers:{host:'localhost','content-type':'text/plain'}},form);assert.equal(form.code,415);
     unavailable=true;const offline=response();await requireOracleAccess(valid,offline);assert.equal(offline.code,503);

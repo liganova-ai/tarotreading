@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { isIP } from 'node:net';
 import { sessionSecret, ACCESS_COOKIE, ACCESS_DURATION, readAccessToken } from './oracleAccess.mjs';
-import { redis, consumeLimits, securityKey } from './securityStore.mjs';
+import { consumeLimits } from './securityStore.mjs';
+import { privateStore } from './privateStore.mjs';
 
 export const SECURITY_UNAVAILABLE = 'Access checks are temporarily unavailable. Please try again later.';
 export function privateHash(value) { return createHmac('sha256', sessionSecret()).update(value).digest('hex'); }
@@ -43,30 +44,23 @@ export async function limitLogin(req, res) {
   if (!result.allowed) { limited(res, result.retryAfter); return false; }
   return true;
 }
-export async function registerSession(token, password) {
+export async function registerSession(token, gate) {
   const session = await readAccessToken(token);
-  await redis(['SET', securityKey(`session:${session.id}`), privateHash(`password:${password}`), 'EX', ACCESS_DURATION]);
+  await privateStore.put(`session:${session.id}`, { gate, keyVersion: privateHash(`gate-key:${process.env.GATE_APP_KEY}`) }, ACCESS_DURATION);
 }
 export async function activeSession(req) {
   const session = await readAccessToken(req.cookies?.[ACCESS_COOKIE]);
-  if (!session || !process.env.ORACLE_PASSWORD) return null;
-  const record = await redis(['GET', securityKey(`session:${session.id}`)]);
-  return record === privateHash(`password:${process.env.ORACLE_PASSWORD}`) ? session : null;
+  if (!session || !process.env.GATE_APP_KEY) return null;
+  const record = await privateStore.get(`session:${session.id}`);
+  if (!record?.gate || record.keyVersion !== privateHash(`gate-key:${process.env.GATE_APP_KEY}`) || Date.parse(record.gate.expiresAt) <= Date.now()) return null;
+  return { ...session, gate: record.gate };
 }
-const policy = {
-  predict: { daily: 100, session: 10, cost: 10 },
-  'validate-question': { daily: 300, session: 30, cost: 1 },
-  translate: { daily: 200, session: 20, cost: 3 },
-  tts: { daily: 500, session: 40, cost: 2 },
-};
 export async function reserveUsage(req, res, operation) {
-  const p = policy[operation];
-  if (!p || !req.oracleSession) throw new Error('Invalid paid operation');
+  if (!['predict', 'validate-question', 'translate', 'tts'].includes(operation) || !req.oracleSession) throw new Error('Invalid paid operation');
+  // Burst protection only; Gate is the authority for the number of whole readings.
   const result = await consumeLimits([
-    { key: 'paid:units', max: 2000, cost: p.cost, seconds: 86400 },
-    { key: `paid:${operation}`, max: p.daily, seconds: 86400 },
-    { key: `session:${req.oracleSession.id}:${operation}`, max: p.session, seconds: ACCESS_DURATION },
-    { key: `ip:${clientIdentity(req)}`, max: 600, cost: p.cost, seconds: 3600 },
+    { key: `requests:ip:${clientIdentity(req)}`, max: 120, seconds: 60 },
+    { key: `requests:session:${req.oracleSession.id}`, max: 120, seconds: 60 },
   ]);
   if (!result.allowed) { limited(res, result.retryAfter); return false; }
   return true;
