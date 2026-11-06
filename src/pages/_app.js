@@ -1,3 +1,6 @@
+import Head from 'next/head';
+import { LanguageProvider } from '@/context/Language';
+import LanguageSelector from '@/components/LanguageSelector';
 import { disposePreparedReadingAudio } from '@/lib/readingAudio';
 import "@/styles/globals.css";
 import localFont from 'next/font/local';
@@ -17,13 +20,25 @@ import '@/styles/prequestion.module.css';
 import '@/styles/question.module.css';
 import '@/styles/cards.module.css';
 import '@/styles/results.module.css';
+import '@/styles/access.module.css';
 
 
 
-export default function App({ Component, pageProps }) {
+export default function App(props) {
+  return <LanguageProvider><Head><title>The Oracle – Look into the future</title></Head><OracleApp {...props} /></LanguageProvider>;
+}
+function OracleApp({ Component, pageProps }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [fontsReady, setFontsReady] = useState(false);
+  const [navigation, setNavigation] = useState({ path: router.pathname, from: null });
+  if (navigation.path !== router.pathname) {
+    setNavigation({ path: router.pathname, from: navigation.path });
+  }
+  // The scenery exits after a 1.1s pause, then moves for .95s and fades.
+  // Account for the outgoing page's .24s fade before revealing the disclaimer.
+  const entranceDelay = !reducedMotion && router.pathname === '/disclaimer'
+    && ['/', '/access'].includes(navigation.from) ? 1.95 : 0;
 
   useEffect(() => {
     let active = true;
@@ -38,7 +53,7 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    ['/disclaimer', '/prequestion', '/question', '/cards', '/results'].forEach(path => router.prefetch(path));
+    ['/disclaimer'].forEach(path => router.prefetch(path));
   }, [router]);
 
   useEffect(() => {
@@ -48,6 +63,7 @@ export default function App({ Component, pageProps }) {
   return (
     <main className={`app-shell ${luxury.variable} ${sabon.variable}`} data-fonts-ready={fontsReady}>
       <OracleScene pathname={router.pathname} />
+      {router.pathname === '/' && <LanguageSelector />}
       <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
         <motion.div
           className="page-content"
@@ -57,9 +73,9 @@ export default function App({ Component, pageProps }) {
           exit={{
             opacity: reducedMotion ? 1 : 0,
             y: reducedMotion ? 0 : -8,
-            transition: { duration: reducedMotion ? 0 : router.pathname === '/' ? 2.05 : .24 },
+            transition: { duration: reducedMotion ? 0 : .24 },
           }}
-          transition={{ duration: reducedMotion ? 0 : .32, ease: [.22, 1, .36, 1] }}
+          transition={{ delay: entranceDelay, duration: reducedMotion ? 0 : .32, ease: [.22, 1, .36, 1] }}
           onAnimationComplete={definition => {
             if (definition.opacity !== 1) return;
             const target = document.querySelector('.page-content [data-autofocus]') || document.querySelector('.page-content h1');

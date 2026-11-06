@@ -9,8 +9,10 @@
 @keyframes dot-fill { 0%, 100% { transform: translateY(25px); } 30%, 65% { transform: translateY(0); } }
 @keyframes dot-star { 0%, 15%, 95%, 100% { opacity: 0; transform: scale(.4); } 35%, 65% { opacity: .9; transform: scale(1); } }
 @keyframes dot-glow { 0%, 100% { color: #ffffff73; filter: drop-shadow(0 0 0 #fff0); } 35%, 65% { color: #fff; filter: drop-shadow(0 0 6px #ffffff80); } }
+.dot[data-instant-fill='true'] .fill { transition: none; }
+.dot[data-instant-fill='true'] .star { transform: scale(1); transition: opacity .4s ease .08s; }
 @media (prefers-reduced-motion: reduce) {
-  .fill, .star { transition: none; }
+  .fill, .star, .dot[data-instant-fill='true'] .star { transition: none; }
   .dot[data-loading='true'], .dot[data-loading='true'] .fill, .dot[data-loading='true'] .star { animation: none; }
   .dot[data-loading='true'] .fill { transform: translateY(0); }
   .dot[data-loading='true'] .star { opacity: .9; transform: scale(1); }

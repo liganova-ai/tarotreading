@@ -1,9 +1,14 @@
+import Link from 'next/link';
+import useTranslatedTexts from '@/hooks/useTranslatedTexts';
+import { useLanguage } from '@/context/Language';
 import wizardStyles from '@/styles/Wizard.module.css';
+import LoadingMessage from '@/components/LoadingMessage';
 import GlassDot from '@/components/GlassDot';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { disposePreparedReadingAudio, ensurePreparedReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import { getSavedReading, getOrCreateReading } from '@/lib/readingCache.mjs';
 import useNarration from '@/hooks/useNarration';
 import { useRouter } from 'next/router';
 import BackControl from '@/components/BackControl';
@@ -177,9 +182,12 @@ const cardDescriptions = {
 
 
 export default function ResultsPage() {
+  const { language, languageReady, t } = useLanguage();
   const router = useRouter();
   const { question, cards, adjectives, oracleStatus } = router.query;
   const [prediction, setPrediction] = useState('');
+  const [readingLanguage, setReadingLanguage] = useState(null);
+  const [retry, setRetry] = useState(0);
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -190,17 +198,19 @@ export default function ResultsPage() {
   const [isDesktop, setIsDesktop] = useState(false);
   const readingRef = useRef(null);
   const cardButtons = useRef([]);
-  const isFetchingRef = useRef(false); // useRef: does not trigger re-render, to check if Prediciton is being fetched from API Endpoint
+  const [readingCards, setReadingCards] = useState(null);
 
   const modalRef = useRef(null);
   const parseArray = value => { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-  const parsedCards = parseArray(cards);
+  const parsedCards = readingCards || parseArray(cards);
+  const selectedNumber = selectedCardIndex === null ? null : parsedCards[selectedCardIndex];
+  const cardTranslation = useTranslatedTexts(selectedNumber ? [cardNames[selectedNumber], cardDescriptions[selectedNumber]] : []);
 
   useEffect(() => {
     ensurePreparedReadingAudio();
   }, []);
 
-  const narration = useNarration(segments, !!prediction && !availability);
+  const narration = useNarration(segments, !!prediction && !availability && readingLanguage === language);
   const readingVisible = !loading && (narration.hasStarted || ['ready', 'error'].includes(narration.status));
 
   useEffect(() => {
@@ -246,53 +256,58 @@ export default function ResultsPage() {
   }, [isDesktop, readingVisible, prediction]);
 
   useEffect(() => {
-    if (!router.isReady || !question || !cards || !adjectives) {
+    if (!router.isReady || !languageReady || !question || !cards || !adjectives) {
       return;
     }
 
+    let active = true;
+    const applyReading = reading => {
+      if (!active) return;
+      setReadingLanguage(language);
+      setPrediction(reading.prediction);
+      setSegments(reading.segments);
+      setReadingCards(reading.cards);
+      setLoading(false);
+    };
+    setError('');
+    setAvailability('');
+    const saved = getSavedReading(question, language);
+    if (saved) {
+      applyReading(saved);
+      return;
+    }
+    setPrediction('');
+    setSegments([]);
+    setReadingCards(null);
     const parsedAdjectives = parseArray(adjectives);
-    const input = validateReadingInput({ question, cards: parsedCards, adjectives: parsedAdjectives });
+    const input = validateReadingInput({ question, cards: parseArray(cards), adjectives: parsedAdjectives });
     if (!input.ok) {
       setError(input.error);
       setLoading(false);
       return;
     }
-    if (oracleStatus === ORACLE_UNAVAILABLE || oracleStatus === ORACLE_CREDITS_EXHAUSTED) {
+    if (!getSavedReading(question) && (oracleStatus === ORACLE_UNAVAILABLE || oracleStatus === ORACLE_CREDITS_EXHAUSTED)) {
       setAvailability(oracleAvailabilityMessage(oracleStatus));
       setLoading(false);
       return;
     }
-
-    if (isFetchingRef.current) {
-      return;
-    }
-
-    const fetchPrediction = async () => {
-      isFetchingRef.current = true;
-      setLoading(true);
-      try {
-        const response = await axios.post('/api/predict', {
-          question,
-          cards: parsedCards,
-          adjectives: parsedAdjectives,
-        });
-        setPrediction(response.data.prediction);
-        setSegments(response.data.segments);
-        setLoading(false);
-      } catch (err) {
-        if (!err.response || err.response.status >= 500 || err.response.status === 429) {
-          setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
-        } else {
-          setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');
-        }
-        setLoading(false);
-      } finally {
-        isFetchingRef.current = false;
+    setLoading(true);
+    getOrCreateReading({ question, language, cards: parseArray(cards), adjectives: parsedAdjectives }, async payload => {
+      const response = await axios.post('/api/predict', payload);
+      return response.data;
+    }).then(applyReading).catch(err => {
+      if (!active) return;
+      if (getSavedReading(question)) {
+        setError('Translation unavailable. Please try again.');
+      } else if (!err.response || err.response.status >= 500 || err.response.status === 429) {
+        setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
+      } else {
+        setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');
       }
-    };
-
-    fetchPrediction();
-  }, [router.isReady, question, cards, adjectives, oracleStatus]);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [router.isReady, languageReady, language, question, cards, adjectives, oracleStatus, retry]);
 
   useEffect(() => {
     if (selectedCardIndex === null) return;
@@ -302,6 +317,7 @@ export default function ResultsPage() {
         if (event.key === 'Escape') { event.preventDefault(); closeModal(); }
         return;
       }
+      if (event.target.closest('[data-reading-back], [data-language-selector]')) return;
       if (!modalRef.current?.contains(event.target) && !event.target.closest('[data-card-selected="true"]')) closeModal();
     };
     const recenter = () => {
@@ -337,7 +353,7 @@ export default function ResultsPage() {
       : Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
     const scale = targetWidth / element.offsetWidth;
     return {
-      x: container.clientWidth / 2 - group.offsetLeft - element.offsetLeft - element.offsetWidth / 2,
+      x: container.clientWidth * (desktop ? .32 : .5) - group.offsetLeft - element.offsetLeft - element.offsetWidth / 2,
       y: container.clientHeight / 2 - group.offsetTop - element.offsetTop - element.offsetHeight / 2,
       scale,
       detailsTop: container.clientHeight / 2 + element.offsetHeight * scale / 2 + 28,
@@ -351,7 +367,7 @@ export default function ResultsPage() {
   };
   const cardTransition = { duration: reducedMotion ? 0 : isDesktop ? 1.15 : .85, ease: [.22, 1, .36, 1] };
 
-  const backToCards = { pathname: '/cards', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
+  const backToCards = { pathname: '/cards', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards: JSON.stringify(parsedCards) } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
   const backToQuestion = { pathname: '/question', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}) } };
 
   const awaitingSpeech = !!prediction && !availability && !narration.hasStarted && !['ready', 'error'].includes(narration.status);
@@ -361,30 +377,30 @@ export default function ResultsPage() {
 
       <header className={styles.header}>
         <BackControl href={backToCards} className={styles.headerButton} />
-        <h1 className={styles.headerheading}>LIGAORACLE</h1>
+        <h1 className={styles.headerheading}><Link href="/">ORACLE</Link></h1>
       </header>
 
       <div className={styles.loadingSection} role="status" aria-live="polite">
         <div className={styles.loadingCircles}>
           {[0, 1, 2].map(index => <span key={index} className={styles.circle}><GlassDot loading index={index} /></span>)}
         </div>
-        <p className={styles.loadingText}>Your future is being processed...</p>
+        <LoadingMessage />
       </div>
     </div>
   );
 
-  if (error) return <WizardLayout back={backToQuestion} action={<PageAction onClick={() => router.push(backToQuestion)}>Try again</PageAction>}><p role="alert" className={styles.error}>{error}</p></WizardLayout>;
+  if (error) return <WizardLayout back={backToQuestion} action={<PageAction onClick={() => getSavedReading(question) ? setRetry(value => value + 1) : router.push(backToQuestion)}>{t("Try again")}</PageAction>}><p role="alert" className={styles.error}>{t(error)}</p></WizardLayout>;
 
   return (
     <div className={styles.container} data-focused={selectedCardIndex !== null}>
 
       <header className={styles.header}>
-        {selectedCardIndex === null ? <BackControl href={backToCards} className={styles.headerButton} /> : <BackControl onClick={closeModal} className={styles.headerButton} />}
-        <h1 className={styles.headerheading}>LIGAORACLE</h1>
+        <BackControl data-reading-back onClick={() => selectedCardIndex !== null ? closeModal() : router.push(backToCards)} className={styles.headerButton} />
+        <h1 className={styles.headerheading}><Link href="/">ORACLE</Link></h1>
       </header>
 
           <div className={styles.cardsColumn}>
-            <div className={styles.cardsSection} role="group" aria-label="Your tarot cards">
+            <div className={styles.cardsSection} role="group" aria-label={t("Your tarot cards")}>
               {parsedCards.map((cardNumber, index) => (
                 <motion.button type="button" key={cardNumber} ref={element => { cardButtons.current[index] = element; }} className={styles.cardContainer}
                   initial={false}
@@ -398,10 +414,10 @@ export default function ResultsPage() {
                   data-speaking={selectedCardIndex === null && (narration.activeCard === index || narration.activeCard === -1)}
                   aria-expanded={selectedCardIndex === index}
                   disabled={selectedCardIndex !== null && selectedCardIndex !== index}
-                  aria-label={`Explore ${cardNames[cardNumber]}`} onClick={event => focusCard(index, event.currentTarget)}>
+                  aria-label={t("Explore {name}", { name: language === "en" ? cardNames[cardNumber] : t("Card {n}", { n: cardNumber }) })} onClick={event => focusCard(index, event.currentTarget)}>
                   <img
                     src={`/cards/Card ${cardNumber}.jpg`}
-                    alt={`Card ${cardNumber}`}
+                    alt={t("Card {n}", { n: cardNumber })}
                     className={styles.cardImage}
                   />
                 </motion.button>
@@ -412,10 +428,10 @@ export default function ResultsPage() {
               transition={{ duration: reducedMotion ? 0 : isDesktop ? .9 : .6, ease: [.22, 1, .36, 1] }}>
             {!availability && <>
               <div className={styles.playbackControls}>
-              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label="Previous card">
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label={t("Previous card")}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg>
               </button>
-              <button type="button" onClick={narration.toggle} className={styles.button} disabled={narration.status === 'loading'} aria-label={narration.isPlaying ? 'Pause reading' : narration.status === 'loading' ? 'Preparing narration' : 'Play reading'}>
+              <button type="button" onClick={narration.toggle} className={styles.button} disabled={narration.status === 'loading'} aria-label={t(narration.isPlaying ? 'Pause reading' : narration.status === 'loading' ? 'Preparing narration' : 'Play reading')}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={narration.status === 'loading' ? styles.voiceSpinner : undefined}>
                   {narration.status === 'loading'
                     ? <circle cx="12" cy="12" r="7" strokeDasharray="28 16" />
@@ -424,11 +440,11 @@ export default function ResultsPage() {
                       : <path d="m9 5 10 7-10 7Z" />}
                 </svg>
               </button>
-              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.next} disabled={!narration.canNext} aria-label="Next card">
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.next} disabled={!narration.canNext} aria-label={t("Next card")}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg>
               </button>
               </div>
-              {narration.status === 'error' && <p className={styles.audioHint}>The oracle’s voice is resting.</p>}
+              {narration.status === 'error' && <p className={styles.audioHint}>{t("The oracle’s voice is resting.")}</p>}
             </>}
             </motion.div>
           </div>
@@ -438,25 +454,26 @@ export default function ResultsPage() {
               animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
               transition={{ duration: reducedMotion ? 0 : isDesktop ? .95 : .6, ease: [.22, 1, .36, 1] }}>
             <div ref={readingRef} className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
-            {availability ? <p>{availability}</p> : segments.map((segment, index) => (
+            {availability ? <p>{t(availability)}</p> : segments.map((segment, index) => (
               <p key={index} className={styles.predictionText} data-speaking={narration.activeCard === segment.cardIndex}>{segment.text}</p>
             ))}
           </div>
             </motion.div>
             <AnimatePresence>
-              {selectedCardIndex !== null && <motion.section key="card-explanation" className={styles.cardDetails} style={{ top: focusGeometry.detailsTop }}
+              {selectedCardIndex !== null && <motion.section key="card-explanation" className={styles.cardDetails} style={{ '--card-details-top': `${focusGeometry.detailsTop}px` }}
                 ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="card-explanation-title" tabIndex={-1}
                 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 32 }}
                 transition={{ duration: reducedMotion ? 0 : .55, delay: reducedMotion ? 0 : .16, ease: [.22, 1, .36, 1] }}>
-                <h2 id="card-explanation-title" className={styles.detailTitle}>{cardNames[parsedCards[selectedCardIndex]]}</h2>
-                <p className={styles.cardDescription}>{cardDescriptions[parsedCards[selectedCardIndex]]}</p>
+                <h2 id="card-explanation-title" className={styles.detailTitle}>{cardTranslation.error ? t("Card {n}", { n: selectedNumber }) : cardTranslation.texts[0]}</h2>
+                <p className={styles.cardDescription}>{cardTranslation.error ? t('Translation unavailable. Please try again.') : cardTranslation.texts[1]}</p>
+                {cardTranslation.error && <button className={wizardStyles.action} onClick={cardTranslation.retry}>{t('Try again')}</button>}
               </motion.section>}
             </AnimatePresence>
           </div>
 
           <footer className={styles.resultActions} aria-hidden={selectedCardIndex !== null}>
             <button type="button" className={wizardStyles.action} disabled={selectedCardIndex !== null}
-              onClick={() => router.push('/')}>Start over</button>
+              onClick={() => router.push('/')}>{t("Start over")}</button>
           </footer>
     </div>
   );

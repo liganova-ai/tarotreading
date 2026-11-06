@@ -11,11 +11,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
    await group.waitFor();await page.waitForTimeout(850);
    const geometry=await group.getByRole('button').evaluateAll(nodes=>nodes.map(e=>{const b=e.getBoundingClientRect();const range=document.createRange();range.selectNodeContents(e);return {name:e.textContent.trim(),x:b.x+b.width/2,y:b.y+b.height/2,size:b.width,textWidth:range.getBoundingClientRect().width,available:e.clientWidth-parseFloat(getComputedStyle(e).paddingLeft)-parseFloat(getComputedStyle(e).paddingRight)}}));
    assert.equal(geometry.length,8);
-   const sphere=await group.locator('[class*=centerSphere]').boundingBox();
+   const sphere=await group.getByRole('status',{name:'Personality selection'}).boundingBox();
    const center={x:sphere.x+sphere.width/2,y:sphere.y+sphere.height/2};
    assert.equal(await group.getByRole('button',{name:'Peacemaker',exact:true}).count(),0);
-   const highlight=group.locator('[class*=centerSphere] [class*=highlight]');
-   assert.equal(await highlight.evaluate(e=>getComputedStyle(e).animationName),'none');
+   const slots=group.getByRole('status',{name:'Personality selection'});
+   assert.equal(await slots.locator('svg').count(),3);
+   assert.equal(await slots.locator('[data-filled="true"]').count(),0);
    const radius=(await group.boundingBox()).width*.375;
    for(let i=0;i<8;i++)assert.ok(Math.abs(Math.hypot(geometry[i].x-center.x,geometry[i].y-center.y)-radius)<2);
    for(let i=0;i<8;i++){
@@ -27,8 +28,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
    for(const name of ['Helper','Investigator','Challenger'])await group.getByRole('button',{name,exact:true}).click();
    await group.getByRole('button',{name:'Reformer',exact:true}).click();
    assert.equal(await group.locator('[aria-pressed="true"]').count(),3);
+   await slots.locator('[data-filled="true"]').nth(2).waitFor();
+   assert.equal(await slots.locator('[data-filled="true"]').count(),3);
    await group.getByRole('button',{name:'Helper',exact:true}).click();
    assert.equal(await group.locator('[aria-pressed="true"]').count(),2);
+   assert.equal(await slots.locator('[data-filled="true"]').count(),2);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    if(width===400)await page.screenshot({path:'/tmp/tarot-personality-orbit.png'});
    console.log({width,height,radius,smallestFont:await group.getByRole('button').first().evaluate(e=>getComputedStyle(e).fontSize)});

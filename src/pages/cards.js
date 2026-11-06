@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/Language';
 import GlassDot from '@/components/GlassDot';
 import { prepareReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useRef, useState } from 'react';
@@ -8,6 +9,7 @@ import styles from '@/styles/cards.module.css';
 const wrap = (value, length) => ((value % length) + length) % length;
 
 export default function CardsPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [deck, setDeck] = useState([]);
   const [selectedCards, setSelectedCards] = useState([]);
@@ -258,11 +260,11 @@ export default function CardsPage() {
 
   return (
     <WizardLayout back={{ pathname: '/question', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(router.query.question ? { question: router.query.question } : {}) } }} className={styles.page} action={
-      <PageAction disabled={selectedCards.length !== 3} onClick={() => { prepareReadingAudio(); router.push({ pathname: '/results', query: { question: router.query.question, cards: JSON.stringify(selectedCards), adjectives: router.query.adjectives, ...(router.query.oracleStatus ? { oracleStatus: router.query.oracleStatus } : {}) } }); }}>Ask the oracle</PageAction>
+      <PageAction disabled={selectedCards.length !== 3} onClick={() => { prepareReadingAudio(); router.push({ pathname: '/results', query: { question: router.query.question, cards: JSON.stringify(selectedCards), adjectives: router.query.adjectives, ...(router.query.oracleStatus ? { oracleStatus: router.query.oracleStatus } : {}) } }); }}>{t("Ask the oracle")}</PageAction>
     }>
-      <h1 className={styles.title}>The future is in your hands</h1>
+      <h1 className={styles.title}>{t("The future is in your hands")}</h1>
       <div className={styles.deckArea}>
-        <div className={styles.deck} ref={deckRef} role="group" aria-label="Tarot deck. Swipe or use left and right arrow keys to browse. Select three cards."
+        <div className={styles.deck} ref={deckRef} role="group" aria-label={t("Tarot deck. Swipe or use left and right arrow keys to browse. Select three cards.")}
           onPointerEnter={event => { if (event.pointerType === 'mouse') interaction.current.hover = true; }}
           onPointerLeave={event => { if (event.pointerType === 'mouse') interaction.current.hover = false; }}
           onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); interaction.current.pauseUntil = performance.now() + 2500; cancelAnimationFrame(settleFrame.current); interaction.current.coasting = false; position.current = Math.round(position.current) + (event.key === 'ArrowRight' ? 1 : -1); layout.current?.(); } }}
@@ -274,31 +276,31 @@ export default function CardsPage() {
         >
           {deck.map((card, index) => {
             const selected = selectedCards.includes(card);
-            return <button key={card} ref={element => { buttons.current[index] = element; }} className={styles.card} aria-label={`Card ${card}`} aria-pressed={selected} onKeyDown={() => { interaction.current.moved = false; }} onClick={() => select(card)}>
+            return <button key={card} ref={element => { buttons.current[index] = element; }} className={styles.card} aria-label={t("Card {n}", { n: card })} aria-pressed={selected} onKeyDown={() => { interaction.current.moved = false; }} onClick={() => select(card)}>
               <span className={`${styles.cardFace} ${selected ? styles.selected : ''}`}><img src="/backcard.jpg" alt="" draggable="false" /></span>
             </button>;
           })}
         </div>
-        <div className={styles.selectionProgress} data-started={selectionStarted} data-count={selectedCards.length} role="status" aria-live="polite" aria-label="Card selection">
-          <p className={styles.instruction} aria-hidden="true">Select 3 cards</p>
+        <div className={styles.selectionProgress} data-started={selectionStarted} data-count={selectedCards.length} role="status" aria-live="polite" aria-label={t("Card selection")}>
+          <p className={styles.instruction} aria-hidden="true">{t("Select 3 cards")}</p>
           <div className={styles.progressSymbols}>
             {[0, 1, 2].map(index => (
               <span key={index} className={styles.progressSlot}>
               <button type="button" className={styles.progressSymbol} data-filled={index < selectedCards.length}
-                disabled={index >= selectedCards.length} aria-label={`Go to selected card ${index + 1}`}
+                disabled={index >= selectedCards.length} aria-label={t("Go to selected card {n}", { n: index + 1 })}
                 onClick={event => centerSelectedCard(selectedCards[index], event.detail === 0)}>
 
                 <GlassDot filled={index < selectedCards.length} index={index} />
               </button>
               {index < selectedCards.length && <button type="button" className={styles.removeSelection}
-                aria-label={`Unselect card ${selectedCards[index]}`}
+                aria-label={t("Unselect card {n}", { n: selectedCards[index] })}
                 onClick={() => setSelectedCards(previous => previous.filter(card => card !== selectedCards[index]))}>
                 <svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg>
               </button>}
               </span>
             ))}
           </div>
-          <span className={styles.srOnly}>{selectedCards.length} of 3 cards selected</span>
+          <span className={styles.srOnly}>{t("{n} of 3 cards selected", { n: selectedCards.length })}</span>
         </div>
       </div>
     </WizardLayout>

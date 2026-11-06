@@ -1,10 +1,10 @@
 import { useId } from 'react';
 import styles from '@/styles/GlassDot.module.css';
 
-export default function GlassDot({ filled = false, loading = false, index = 0 }) {
+export default function GlassDot({ filled = false, loading = false, index = 0, instantFill = false }) {
   const id = `glass-dot-${useId().replace(/:/g, '')}`;
   return <svg className={styles.dot} width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false"
-    data-active={filled} data-loading={loading} style={{ '--dot-delay': `${index * .28}s` }}>
+    data-active={filled} data-loading={loading} data-instant-fill={instantFill} style={{ '--dot-delay': `${index * .28}s` }}>
     <defs>
       <linearGradient id={`${id}-gradient`} x1={index === 1 ? '4' : '26'} y1="4" x2="8" y2="29" gradientUnits="userSpaceOnUse">
         <stop stopColor="#fff" /><stop offset=".4" stopColor="#aaa" /><stop offset=".65" stopColor="#333" /><stop offset="1" stopColor="#eee" />

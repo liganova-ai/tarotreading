@@ -1,3 +1,4 @@
+import { useLanguage } from '@/context/Language';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
@@ -6,6 +7,7 @@ import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED } from '@/lib/oracleAvaila
 import styles from '@/styles/question.module.css';
 
 export default function QuestionPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [question, setQuestion] = useState('');
   const [error, setError] = useState('');
@@ -55,11 +57,11 @@ export default function QuestionPage() {
   };
 
   return (
-    <WizardLayout back={{ pathname: '/prequestion', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(question ? { question } : {}) } }} action={<PageAction disabled={!question.trim() || checking} onClick={submit}>{checking ? 'Checking…' : 'Confirm'}</PageAction>}>
-      <h1 className={styles.title}>What is your question?</h1>
+    <WizardLayout back={{ pathname: '/prequestion', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(question ? { question } : {}) } }} action={<PageAction disabled={!question.trim() || checking} onClick={submit}>{t(checking ? 'Checking…' : 'Confirm')}</PageAction>}>
+      <h1 className={styles.title}>{t("What is your question?")}</h1>
       <div className={styles.writingArea}>
-        <textarea data-autofocus ref={inputRef} aria-label="Your tarot question" aria-describedby={error ? 'question-error' : undefined} aria-invalid={!!error} value={question} maxLength={400} rows={1} className={styles.input} placeholder="Write your question…" onChange={event => { setQuestion(event.target.value); setError(''); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
-        {error && <p id="question-error" role="alert" className={styles.error}>{error}</p>}
+        <textarea data-autofocus ref={inputRef} aria-label={t("Your tarot question")} aria-describedby={error ? 'question-error' : undefined} aria-invalid={!!error} value={question} maxLength={400} rows={1} className={styles.input} placeholder={t("Write your question…")} onChange={event => { setQuestion(event.target.value); setError(''); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
+        {error && <p id="question-error" role="alert" className={styles.error}>{t(error)}</p>}
       </div>
     </WizardLayout>
   );

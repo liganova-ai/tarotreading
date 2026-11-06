@@ -13,8 +13,15 @@
   padding: 10px 52px; border-radius: 30px; background: #d9d9d9; color: #080808; font-size: 1.02rem; font-weight: 800;
 }
 
-@media (min-width: 960px) and (min-aspect-ratio: 4/3) {
+@media (min-aspect-ratio: 4/3) {
   .container { padding-top: clamp(40px, 7svh, 76px); }
   .smallText { font-size: clamp(20px, 1.5vw, 28px); max-width: 540px; }
   .footer { gap: 24px; }
+}
+
+@media (max-height: 540px) {
+  .container { padding: 24px 20px max(16px, env(safe-area-inset-bottom)); }
+  .footer { gap: 12px; }
+  .smallText { font-size: 16px; line-height: 1.2; }
+  .startButton { min-height: 40px; padding-block: 8px; }
 }

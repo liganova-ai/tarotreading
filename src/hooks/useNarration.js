@@ -1,9 +1,11 @@
+import { useLanguage } from '@/context/Language';
 import { useEffect, useRef, useState } from 'react';
 import { takeReadingAudio, MUSIC_INTRO_MS, MUSIC_LEVEL, MUSIC_UNDER_VOICE, MUSIC_URL } from '@/lib/readingAudio';
 
 const SPOKEN_WELCOME = 'Welcome to the oracle. Here is your personal tarot reading. Take a quiet breath, and let the cards guide you.';
 
 export default function useNarration(segments, enabled) {
+  const { t } = useLanguage();
   const [status, setStatus] = useState('idle');
   const [hasStarted, setHasStarted] = useState(false);
   const [activeCard, setActiveCard] = useState(-2);
@@ -21,7 +23,7 @@ export default function useNarration(segments, enabled) {
     sessionRef.current = session;
     setStatus('loading');
 
-    const spokenSegments = [{ cardIndex: -2, text: SPOKEN_WELCOME }, ...segments];
+    const spokenSegments = [{ cardIndex: -2, text: t(SPOKEN_WELCOME) }, ...segments];
     const clips = spokenSegments.map(async segment => {
       try {
         const response = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
@@ -153,7 +155,7 @@ export default function useNarration(segments, enabled) {
       urls.forEach(url => URL.revokeObjectURL(url));
       if (sessionRef.current === session) sessionRef.current = null;
     };
-  }, [segments, enabled, attempt]);
+  }, [segments, enabled, attempt, t]);
 
   const toggle = async () => {
     const session = sessionRef.current;

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import BackControl from '@/components/BackControl';
 import styles from '@/styles/Wizard.module.css';
 
@@ -10,7 +11,7 @@ export default function WizardLayout({ back, children, action, className = '' })
     <div className={`${styles.page} ${className}`}>
       <header className={styles.header}>
         {back && <BackControl href={back} className={styles.back} />}
-        <span className={styles.logo}>LIGAORACLE</span>
+        <Link href="/" className={styles.logo}>ORACLE</Link>
       </header>
       <div className={styles.content}>{children}</div>
       {action}

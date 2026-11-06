@@ -1,3 +1,4 @@
+import { LANGUAGE_NAMES, isLanguage } from '@/lib/languages.mjs';
 import { normalizeReadingSegments, READING_SEGMENTS_SCHEMA } from '@/lib/readingSegments.mjs';
 import { oracleFailureCode, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
 import { getOpenAI } from '@/lib/openai';
@@ -96,13 +97,15 @@ export const config = { api: { bodyParser: { sizeLimit: '8kb' } } };
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
+  const language = req.body?.language ?? 'en';
+  if (!isLanguage(language)) return res.status(400).json({ error: 'Unsupported language.' });
   const input = validateReadingInput(req.body);
   if (!input.ok) return res.status(400).json({ error: input.error });
   try {
     const client = getOpenAI();
     // Always re-check here: a client can skip the question page entirely.
     if (!await isTarotQuestion(client, input.question)) return res.status(400).json({ error: QUESTION_ERROR });
-    const result = await structuredReply(client, READING_PROMPT, {
+    const result = await structuredReply(client, READING_PROMPT.replace('Write in the language of the question.', `Write the entire reading in ${LANGUAGE_NAMES[language]}, regardless of the language of the question.`), {
       question: input.question,
       cards: input.cards.map(card => cardNames[card]),
       personalityTraits: input.adjectives.map(type => traits[type]),
