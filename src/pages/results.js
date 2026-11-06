@@ -1,183 +1,29 @@
+import { cardNames, cardDescriptions } from '@/lib/tarotCards.mjs';
+import Link from 'next/link';
+import useTranslatedTexts from '@/hooks/useTranslatedTexts';
+import { useLanguage } from '@/context/Language';
+import wizardStyles from '@/styles/Wizard.module.css';
+import LoadingMessage from '@/components/LoadingMessage';
+import GlassDot from '@/components/GlassDot';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { disposePreparedReadingAudio, ensurePreparedReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import { getSavedReading, getOrCreateReading } from '@/lib/readingCache.mjs';
 import useNarration from '@/hooks/useNarration';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import BackControl from '@/components/BackControl';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
 import { validateReadingInput } from '@/lib/tarotValidation.mjs';
 import styles from '../styles/results.module.css';
 
-const cardNames = {
-  '1': 'The Fool',
-  '2': 'The Magician',
-  '3': 'The High Priestess',
-  '4': 'The Empress',
-  '5': 'The Emperor',
-  '6': 'The Hierophant',
-  '7': 'The Lovers',
-  '8': 'The Chariot',
-  '9': 'Strength',
-  '10': 'The Hermit',
-  '11': 'Wheel of Fortune',
-  '12': 'Justice',
-  '13': 'The Hanged Man',
-  '14': 'Death',
-  '15': 'Temperance',
-  '16': 'The Devil',
-  '17': 'The Tower',
-  '18': 'The Star',
-  '19': 'The Moon',
-  '20': 'The Sun',
-  '21': 'Judgement',
-  '22': 'The World',
-  '23': 'Ace of Wands',
-  '24': 'Two of Wands',
-  '25': 'Three of Wands',
-  '26': 'Four of Wands',
-  '27': 'Five of Wands',
-  '28': 'Six of Wands',
-  '29': 'Seven of Wands',
-  '30': 'Eight of Wands',
-  '31': 'Nine of Wands',
-  '32': 'Ten of Wands',
-  '33': 'Page of Wands',
-  '34': 'Knight of Wands',
-  '35': 'Queen of Wands',
-  '36': 'King of Wands',
-  '37': 'Ace of Cups',
-  '38': 'Two of Cups',
-  '39': 'Three of Cups',
-  '40': 'Four of Cups',
-  '41': 'Five of Cups',
-  '42': 'Six of Cups',
-  '43': 'Seven of Cups',
-  '44': 'Eight of Cups',
-  '45': 'Nine of Cups',
-  '46': 'Ten of Cups',
-  '47': 'Page of Cups',
-  '48': 'Knight of Cups',
-  '49': 'Queen of Cups',
-  '50': 'King of Cups',
-  '51': 'Ace of Swords',
-  '52': 'Two of Swords',
-  '53': 'Three of Swords',
-  '54': 'Four of Swords',
-  '55': 'Five of Swords',
-  '56': 'Six of Swords',
-  '57': 'Seven of Swords',
-  '58': 'Eight of Swords',
-  '59': 'Nine of Swords',
-  '60': 'Ten of Swords',
-  '61': 'Page of Swords',
-  '62': 'Knight of Swords',
-  '63': 'Queen of Swords',
-  '64': 'King of Swords',
-  '65': 'Ace of Pentacles',
-  '66': 'Two of Pentacles',
-  '67': 'Three of Pentacles',
-  '68': 'Four of Pentacles', 
-  '69': 'Five of Pentacles',
-  '70': 'Six of Pentacles',
-  '71': 'Seven of Pentacles',
-  '72': 'Eight of Pentacles',
-  '73': 'Nine of Pentacles',
-  '74': 'Ten of Pentacles',
-  '75': 'Page of Pentacles', 
-  '76': 'Knight of Pentacles',
-  '77': 'Queen of Pentacles',
-  '78': 'King of Pentacles' 
-};
-
-const cardDescriptions = {
-  '1': 'The Fool: Represents new beginnings, spontaneity, and a free spirit. It’s about taking risks and embarking on new adventures with enthusiasm and trust in the journey.',
-  '2': 'The Magician: Symbolizes manifestation, resourcefulness, and the power of will. The Magician has all the tools needed to turn dreams into reality.',
-  '3': 'The High Priestess: Signifies intuition, mystery, and inner knowledge. She encourages looking beyond the obvious and trusting your gut feelings.',
-  '4': 'The Empress: Embodies fertility, abundance, and nurturing energy. She is associated with creativity, motherhood, and the beauty of nature.',
-  '5': 'The Emperor: Represents authority, structure, and stability. The Emperor brings order, control, and leadership to chaotic situations.',
-  '6': 'The Hierophant: Denotes tradition, spiritual wisdom, and conformity. It suggests seeking guidance from established beliefs or mentors.',
-  '7': 'The Lovers: Signifies love, harmony, and partnership. It’s about important choices in relationships or aligning values with someone else.',
-  '8': 'The Chariot: Stands for determination, control, and victory through effort. The Chariot encourages harnessing emotions to achieve success.',
-  '9': 'Strength: Represents courage, patience, and inner strength. It reminds you to use compassion to overcome challenges.',
-  '10': 'The Hermit: Symbolizes introspection, solitude, and spiritual enlightenment. The Hermit invites you to reflect and seek wisdom within.',
-  '11': 'Wheel of Fortune: A card of cycles, fate, and destiny. It signifies changes and turning points, both positive and negative.',
-  '12': 'Justice: Represents fairness, truth, and balance. Justice seeks to right wrongs and suggests making decisions with integrity.',
-  '13': 'The Hanged Man: Symbolizes letting go, surrender, and gaining new perspectives. It’s a card of pause and reflection before moving forward.',
-  '14': 'Death: Represents transformation, endings, and new beginnings. Death isn’t about literal death, but about major life changes.',
-  '15': 'Temperance: Signifies balance, moderation, and patience. Temperance encourages calm and harmonious action.',
-  '16': 'The Devil: Denotes temptation, materialism, and self-imposed limitations. It’s about being trapped by desires or unhealthy patterns.',
-  '17': 'The Tower: Represents sudden upheaval, chaos, and revelation. The Tower signifies the breaking down of old structures to rebuild anew.',
-  '18': 'The Star: A card of hope, inspiration, and healing. The Star is about faith and renewed optimism after difficult times.',
-  '19': 'The Moon: Symbolizes illusion, fear, and the unconscious. The Moon encourages confronting hidden truths and working through uncertainties.',
-  '20': 'The Sun: Represents positivity, success, and joy. The Sun is about happiness, vitality, and achieving your goals.',
-  '21': 'Judgement: Signifies reflection, rebirth, and renewal. It encourages self-evaluation and making decisions based on past lessons.',
-  '22': 'The World: Symbolizes completion, achievement, and wholeness. The World is about reaching your goals and celebrating success.',
-  '23': 'Ace of Wands: Represents new opportunities, creativity, and enthusiasm. The Ace of Wands brings the energy to start new ventures.',
-  '24': 'Two of Wands: Denotes planning, progress, and future possibilities. It’s about making decisions and contemplating your next steps.',
-  '25': 'Three of Wands: Symbolizes expansion, growth, and long-term vision. It suggests that your efforts are beginning to bear fruit.',
-  '26': 'Four of Wands: Represents celebration, stability, and community. It’s about achieving a sense of completion and enjoying the results.',
-  '27': 'Five of Wands: Signifies conflict, competition, and challenges. The card reflects disagreements or struggles, but also the potential for growth.',
-  '28': 'Six of Wands: A card of victory, recognition, and success. It suggests receiving praise and achieving public acknowledgment.',
-  '29': 'Seven of Wands: Denotes standing your ground, perseverance, and defense. It encourages defending your position and beliefs despite opposition.',
-  '30': 'Eight of Wands: Represents swift action, movement, and progress. The Eight of Wands is about things quickly moving forward.',
-  '31': 'Nine of Wands: Signifies resilience, persistence, and endurance. It’s about continuing the fight even when tired or faced with obstacles.',
-  '32': 'Ten of Wands: Symbolizes burden, responsibility, and hard work. The Ten of Wands reflects carrying a heavy load and nearing the end of a difficult task.',
-  '33': 'Page of Wands: Represents curiosity, enthusiasm, and new ideas. The Page of Wands brings a spark of inspiration and potential.',
-  '34': 'Knight of Wands: Signifies action, adventure, and passion. The Knight of Wands moves forward with confidence and high energy.',
-  '35': 'Queen of Wands: Denotes determination, independence, and warmth. The Queen of Wands is charismatic, creative, and a natural leader.',
-  '36': 'King of Wands: Represents leadership, vision, and confidence. The King of Wands is a dynamic and bold leader who inspires others.',
-  '37': 'Ace of Cups: A card of love, emotional fulfillment, and new relationships. The Ace of Cups is about open-heartedness and new emotional experiences.',
-  '38': 'Two of Cups: Symbolizes partnership, harmony, and mutual respect. It suggests a strong connection between two individuals.',
-  '39': 'Three of Cups: Represents friendship, celebration, and social connections. It’s about enjoying the company of others and celebrating shared moments.',
-  '40': 'Four of Cups: Signifies contemplation, apathy, and introspection. The card suggests dissatisfaction or missed opportunities.',
-  '41': 'Five of Cups: Denotes loss, grief, and regret. The card encourages focusing on what remains rather than what’s lost.',
-  '42': 'Six of Cups: A card of nostalgia, memories, and childhood. It represents looking back on the past with fondness or unresolved emotions.',
-  '43': 'Seven of Cups: Symbolizes choices, illusion, and fantasy. The Seven of Cups encourages careful decision-making and distinguishing dreams from reality.',
-  '44': 'Eight of Cups: Represents leaving behind, walking away, and searching for more. It’s about moving on from unfulfilling situations.',
-  '45': 'Nine of Cups: A card of satisfaction, pleasure, and emotional fulfillment. The Nine of Cups is about achieving what you desire.',
-  '46': 'Ten of Cups: Symbolizes happiness, harmony, and emotional fulfillment. It reflects domestic bliss and a strong sense of community or family.',
-  '47': 'Page of Cups: Represents creativity, intuition, and emotional openness. The Page of Cups brings new emotional experiences and creative ideas.',
-  '48': 'Knight of Cups: Denotes romance, idealism, and charm. The Knight of Cups pursues dreams and emotional connections with passion.',
-  '49': 'Queen of Cups: A card of compassion, empathy, and deep emotional understanding. The Queen of Cups is nurturing and emotionally supportive.',
-  '50': 'King of Cups: Represents emotional balance, control, and diplomacy. The King of Cups is calm and wise in navigating emotions.',
-  '51': 'Ace of Swords: Symbolizes clarity, truth, and new intellectual insights. It suggests a breakthrough in understanding or communication.',
-  '52': 'Two of Swords: Denotes indecision, difficult choices, and stalemate. The card reflects the need for balance and careful decision-making.',
-  '53': 'Three of Swords: Represents heartbreak, sorrow, and emotional pain. It’s a card of grief but also suggests the possibility of healing.',
-  '54': 'Four of Swords: A card of rest, recovery, and reflection. It suggests taking time to recharge and heal after challenges.',
-  '55': 'Five of Swords: Symbolizes conflict, defeat, and tension. The card reflects a need to assess whether winning at all costs is worth it.',
-  '56': 'Six of Swords: Denotes transition, moving on, and finding peace. It’s about leaving behind difficulties and heading towards calmer waters.',
-  '57': 'Seven of Swords: Represents deception, trickery, and strategy. The card encourages caution and careful planning to avoid pitfalls.',
-  '58': 'Eight of Swords: A card of feeling trapped, restricted, and powerless. It suggests self-imposed limitations and the need to break free.',
-  '59': 'Nine of Swords: Denotes anxiety, worry, and sleepless nights. The card reflects fears and concerns weighing heavily on the mind.',
-  '60': 'Ten of Swords: Represents betrayal, endings, and painful conclusions. The card indicates hitting rock bottom but also the opportunity for renewal.',
-  '61': 'Page of Swords: Signifies curiosity, new ideas, and mental agility. The Page of Swords brings intellectual energy and fresh perspectives.',
-  '62': 'Knight of Swords: A card of action, speed, and determination. The Knight of Swords is a fast-moving and focused force, often charging into situations.',
-  '63': 'Queen of Swords: Denotes clarity, perception, and intellectual strength. The Queen of Swords is sharp-minded and seeks truth with fairness.',
-  '64': 'King of Swords: Represents authority, judgment, and intellectual power. The King of Swords uses logic and reason to make decisions and lead others.',
-  '65': 'Ace of Pentacles: Symbolizes new opportunities, prosperity, and material success. The Ace of Pentacles brings tangible rewards and stability.',
-  '66': 'Two of Pentacles: Denotes balance, adaptability, and juggling responsibilities. The card encourages maintaining harmony while handling various tasks.',
-  '67': 'Three of Pentacles: Represents teamwork, collaboration, and craftsmanship. It reflects the power of working with others to achieve goals.',
-  '68': 'Four of Pentacles: Symbolizes security, control, and holding on tightly. The Four of Pentacles cautions against being too rigid or possessive.',
-  '69': 'Five of Pentacles: Represents poverty, loss, and hardship. The card reflects financial or emotional struggles but suggests support is available.',
-  '70': 'Six of Pentacles: Denotes generosity, charity, and balance. It suggests the fair distribution of resources and giving or receiving help.',
-  '71': 'Seven of Pentacles: Symbolizes patience, evaluation, and long-term investment. It reflects assessing progress and waiting for results.',
-  '72': 'Eight of Pentacles: Represents skill, craftsmanship, and hard work. The Eight of Pentacles encourages dedication and focus on mastering a craft.',
-  '73': 'Nine of Pentacles: Denotes independence, luxury, and self-sufficiency. The Nine of Pentacles celebrates achieving success through personal effort.',
-  '74': 'Ten of Pentacles: A card of family, wealth, and legacy. It reflects long-term stability, abundance, and generational success.',
-  '75': 'Page of Pentacles: Represents ambition, new opportunities, and focus on material gain. The Page of Pentacles is eager to learn and build wealth.',
-  '76': 'Knight of Pentacles: Denotes hard work, responsibility, and persistence. The Knight of Pentacles is steady, reliable, and committed to goals.',
-  '77': 'Queen of Pentacles: Symbolizes nurturing, practicality, and financial acumen. The Queen of Pentacles brings comfort and stability to others.',
-  '78': 'King of Pentacles: Represents wealth, security, and success. The King of Pentacles is a wise and capable leader in financial matters.'
-};
-
-
-
 export default function ResultsPage() {
+  const { language, languageReady, t } = useLanguage();
   const router = useRouter();
-  const { question, cards, adjectives, oracleStatus } = router.query;
+  const { question, cards, adjectives, oracleStatus, processId } = router.query;
   const [prediction, setPrediction] = useState('');
+  const [readingLanguage, setReadingLanguage] = useState(null);
+  const [retry, setRetry] = useState(0);
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -185,67 +31,120 @@ export default function ResultsPage() {
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [focusGeometry, setFocusGeometry] = useState({ x: 0, y: 0, scale: 1, detailsTop: 0 });
   const reducedMotion = useReducedMotion();
+  const [isDesktop, setIsDesktop] = useState(false);
+  const readingRef = useRef(null);
   const cardButtons = useRef([]);
-  const isFetchingRef = useRef(false); // useRef: does not trigger re-render, to check if Prediciton is being fetched from API Endpoint
+  const [readingCards, setReadingCards] = useState(null);
 
   const modalRef = useRef(null);
   const parseArray = value => { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-  const parsedCards = parseArray(cards);
+  const parsedCards = readingCards || parseArray(cards);
+  const selectedNumber = selectedCardIndex === null ? null : parsedCards[selectedCardIndex];
+  const cardTranslation = useTranslatedTexts(selectedNumber ? [cardNames[selectedNumber], cardDescriptions[selectedNumber]] : [], processId);
 
   useEffect(() => {
     ensurePreparedReadingAudio();
   }, []);
 
-  const narration = useNarration(segments, !!prediction && !availability);
+  const narration = useNarration(segments, !!prediction && !availability && readingLanguage === language, processId);
+  const readingVisible = !loading && (narration.hasStarted || ['ready', 'error'].includes(narration.status));
 
   useEffect(() => {
-    if (!router.isReady || !question || !cards || !adjectives) {
+    const media = window.matchMedia('(min-width: 960px)');
+    const update = () => setIsDesktop(media.matches);
+    update(); media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    const element = readingRef.current;
+    if (!element) return;
+    if (!isDesktop) { element.style.removeProperty('--reading-font-size'); return; }
+    if (!readingVisible || !prediction) return;
+    let disposed = false;
+    let frame;
+    const fit = () => {
+      if (disposed || !element.isConnected || !element.clientHeight) return;
+      const upper = Math.min(17, Math.max(13, window.innerHeight * .018));
+      const apply = size => element.style.setProperty('--reading-font-size', `${size}px`);
+      const updateOverflow = () => { element.dataset.overflow = String(element.scrollHeight > element.clientHeight + 1); };
+      apply(upper);
+      if (element.scrollHeight <= element.clientHeight + 1) { updateOverflow(); return; }
+      // Fit the complete reading without cutting or shortening its content.
+      let low = 12, high = upper;
+      apply(low);
+      if (element.scrollHeight > element.clientHeight + 1) { updateOverflow(); return; }
+      for (let step = 0; step < 6; step++) {
+        const middle = (low + high) / 2;
+        apply(middle);
+        if (element.scrollHeight <= element.clientHeight + 1) low = middle;
+        else high = middle;
+      }
+      apply(Math.floor(low * 10) / 10);
+      updateOverflow();
+    };
+    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fit); };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(element);
+    document.fonts.ready.then(schedule);
+    fit();
+    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [isDesktop, readingVisible, prediction]);
+
+  useEffect(() => {
+    if (!router.isReady || !languageReady) return;
+    if (!question || !cards || !adjectives || !processId) { router.replace('/prequestion'); return; }
+
+    let active = true;
+    const applyReading = reading => {
+      if (!active) return;
+      setReadingLanguage(language);
+      setPrediction(reading.prediction);
+      setSegments(reading.segments);
+      setReadingCards(reading.cards);
+      setLoading(false);
+    };
+    setError('');
+    setAvailability('');
+    const saved = getSavedReading(question, language, processId);
+    if (saved) {
+      applyReading(saved);
       return;
     }
-
+    setPrediction('');
+    setSegments([]);
+    setReadingCards(null);
     const parsedAdjectives = parseArray(adjectives);
-    const input = validateReadingInput({ question, cards: parsedCards, adjectives: parsedAdjectives });
+    const input = validateReadingInput({ question, cards: parseArray(cards), adjectives: parsedAdjectives });
     if (!input.ok) {
       setError(input.error);
       setLoading(false);
       return;
     }
-    if (oracleStatus === ORACLE_UNAVAILABLE || oracleStatus === ORACLE_CREDITS_EXHAUSTED) {
+    if (!getSavedReading(question, undefined, processId) && (oracleStatus === ORACLE_UNAVAILABLE || oracleStatus === ORACLE_CREDITS_EXHAUSTED)) {
       setAvailability(oracleAvailabilityMessage(oracleStatus));
       setLoading(false);
       return;
     }
-
-    if (isFetchingRef.current) {
-      return;
-    }
-
-    const fetchPrediction = async () => {
-      isFetchingRef.current = true;
-      setLoading(true);
-      try {
-        const response = await axios.post('/api/predict', {
-          question,
-          cards: parsedCards,
-          adjectives: parsedAdjectives,
-        });
-        setPrediction(response.data.prediction);
-        setSegments(response.data.segments);
-        setLoading(false);
-      } catch (err) {
-        if (!err.response || err.response.status >= 500 || err.response.status === 429) {
-          setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
-        } else {
-          setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');
-        }
-        setLoading(false);
-      } finally {
-        isFetchingRef.current = false;
+    setLoading(true);
+    getOrCreateReading({ processId, question, language, cards: parseArray(cards), adjectives: parsedAdjectives }, async payload => {
+      const response = await fetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) throw Object.assign(new Error(data.error || 'Reading unavailable.'), { response: { status: response.status, data } });
+      return data;
+    }).then(applyReading).catch(err => {
+      if (!active) return;
+      if (getSavedReading(question, undefined, processId)) {
+        setError('Translation unavailable. Please try again.');
+      } else if (!err.response || err.response.status >= 500) {
+        setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
+      } else {
+        setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');
       }
-    };
-
-    fetchPrediction();
-  }, [router.isReady, question, cards, adjectives, oracleStatus]);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [router.isReady, languageReady, language, question, cards, adjectives, oracleStatus, processId, retry]);
 
   useEffect(() => {
     if (selectedCardIndex === null) return;
@@ -255,6 +154,7 @@ export default function ResultsPage() {
         if (event.key === 'Escape') { event.preventDefault(); closeModal(); }
         return;
       }
+      if (event.target.closest('[data-reading-back], [data-language-selector]')) return;
       if (!modalRef.current?.contains(event.target) && !event.target.closest('[data-card-selected="true"]')) closeModal();
     };
     const recenter = () => {
@@ -283,11 +183,14 @@ export default function ResultsPage() {
 
   const measureFocus = element => {
     const group = element.parentElement;
-    const container = group.parentElement;
-    const targetWidth = Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
+    const container = group.closest(`[data-focused]`);
+    const desktop = window.innerWidth >= 960;
+    const targetWidth = desktop
+      ? Math.min(280, container.clientWidth * .25, container.clientHeight * .3)
+      : Math.min(220, container.clientWidth * .46, container.clientHeight * .24);
     const scale = targetWidth / element.offsetWidth;
     return {
-      x: group.clientWidth / 2 - element.offsetLeft - element.offsetWidth / 2,
+      x: container.clientWidth * (desktop ? .32 : .5) - group.offsetLeft - element.offsetLeft - element.offsetWidth / 2,
       y: container.clientHeight / 2 - group.offsetTop - element.offsetTop - element.offsetHeight / 2,
       scale,
       detailsTop: container.clientHeight / 2 + element.offsetHeight * scale / 2 + 28,
@@ -299,10 +202,10 @@ export default function ResultsPage() {
     setFocusGeometry(measureFocus(element));
     setSelectedCardIndex(index);
   };
-  const cardTransition = { duration: reducedMotion ? 0 : .85, ease: [.22, 1, .36, 1] };
+  const cardTransition = { duration: reducedMotion ? 0 : isDesktop ? 1.15 : .85, ease: [.22, 1, .36, 1] };
 
-  const backToCards = { pathname: '/cards', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
-  const backToQuestion = { pathname: '/question', query: { ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}) } };
+  const backToCards = { pathname: '/cards', query: { processId, ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}), ...(cards ? { cards: JSON.stringify(parsedCards) } : {}), ...(oracleStatus ? { oracleStatus } : {}) } };
+  const backToQuestion = { pathname: '/question', query: { processId, ...(question ? { question } : {}), ...(adjectives ? { adjectives } : {}) } };
 
   const awaitingSpeech = !!prediction && !availability && !narration.hasStarted && !['ready', 'error'].includes(narration.status);
 
@@ -311,66 +214,61 @@ export default function ResultsPage() {
 
       <header className={styles.header}>
         <BackControl href={backToCards} className={styles.headerButton} />
-        <h1 className={styles.headerheading}>LIGAORACLE</h1>
+        <h1 className={styles.headerheading}><Link href="/">ORACLE</Link></h1>
       </header>
 
       <div className={styles.loadingSection} role="status" aria-live="polite">
         <div className={styles.loadingCircles}>
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
-          <div className={styles.circle} />
+          {[0, 1, 2].map(index => <span key={index} className={styles.circle}><GlassDot loading index={index} /></span>)}
         </div>
-        <p className={styles.loadingText}>Your future is being processed...</p>
+        <LoadingMessage />
       </div>
     </div>
   );
 
-  if (error) return <WizardLayout back={backToQuestion} action={<PageAction onClick={() => router.push(backToQuestion)}>Try again</PageAction>}><p role="alert" className={styles.error}>{error}</p></WizardLayout>;
+  if (error) return <WizardLayout back={backToQuestion} action={<PageAction onClick={() => getSavedReading(question, undefined, processId) ? setRetry(value => value + 1) : router.push(backToQuestion)}>{t("Try again")}</PageAction>}><p role="alert" className={styles.error}>{t(error)}</p></WizardLayout>;
 
   return (
     <div className={styles.container} data-focused={selectedCardIndex !== null}>
 
       <header className={styles.header}>
-        {selectedCardIndex === null ? <BackControl href={backToCards} className={styles.headerButton} /> : <BackControl onClick={closeModal} className={styles.headerButton} />}
-        <h1 className={styles.headerheading}>LIGAORACLE</h1>
+        <BackControl data-reading-back onClick={() => selectedCardIndex !== null ? closeModal() : router.push(backToCards)} className={styles.headerButton} />
+        <h1 className={styles.headerheading}><Link href="/">ORACLE</Link></h1>
       </header>
 
-            <div className={styles.cardsSection} role="group" aria-label="Your tarot cards">
+          <div className={styles.cardsColumn}>
+            <div className={styles.cardsSection} role="group" aria-label={t("Your tarot cards")}>
               {parsedCards.map((cardNumber, index) => (
                 <motion.button type="button" key={cardNumber} ref={element => { cardButtons.current[index] = element; }} className={styles.cardContainer}
                   initial={false}
                   animate={selectedCardIndex === null
-                    ? { x: 0, y: index === 1 ? -14 : 7, rotate: (index - 1) * 7, scale: 1, opacity: 1 }
+                    ? { x: 0, y: index === 1 ? -14 : isDesktop ? 18 : 7, rotate: (index - 1) * (isDesktop ? 12 : 7), originX: .5, originY: isDesktop ? 1.4 : .5, scale: 1, opacity: 1 }
                     : selectedCardIndex === index
-                      ? { x: focusGeometry.x, y: focusGeometry.y, rotate: 0, scale: focusGeometry.scale, opacity: 1 }
+                      ? { x: focusGeometry.x, y: focusGeometry.y, rotate: 0, originX: .5, originY: .5, scale: focusGeometry.scale, opacity: 1 }
                       : { x: index < selectedCardIndex ? '-100vw' : '100vw', y: 28, rotate: index < selectedCardIndex ? -24 : 24, scale: .92, opacity: 0 }}
                   transition={cardTransition}
                   data-card-selected={selectedCardIndex === index}
                   data-speaking={selectedCardIndex === null && (narration.activeCard === index || narration.activeCard === -1)}
                   aria-expanded={selectedCardIndex === index}
                   disabled={selectedCardIndex !== null && selectedCardIndex !== index}
-                  aria-label={`Explore ${cardNames[cardNumber]}`} onClick={event => focusCard(index, event.currentTarget)}>
+                  aria-label={t("Explore {name}", { name: language === "en" ? cardNames[cardNumber] : t("Card {n}", { n: cardNumber }) })} onClick={event => focusCard(index, event.currentTarget)}>
                   <img
                     src={`/cards/Card ${cardNumber}.jpg`}
-                    alt={`Card ${cardNumber}`}
+                    alt={t("Card {n}", { n: cardNumber })}
                     className={styles.cardImage}
                   />
                 </motion.button>
               ))}
             </div>
-
-          <div className={styles.predictionSection}>
-            <motion.div className={styles.readingContent} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
-              animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
-              transition={{ duration: reducedMotion ? 0 : .6, ease: [.22, 1, .36, 1] }}>
+            <motion.div className={styles.underCardsControls} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
+              animate={{ opacity: selectedCardIndex !== null ? 0 : 1, y: selectedCardIndex !== null ? 24 : 0 }}
+              transition={{ duration: reducedMotion ? 0 : isDesktop ? .9 : .6, ease: [.22, 1, .36, 1] }}>
             {!availability && <>
               <div className={styles.playbackControls}>
-              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label="Previous card">
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.previous} disabled={!narration.canPrevious} aria-label={t("Previous card")}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m14 7-5 5 5 5" /></svg>
               </button>
-              <button type="button" onClick={narration.toggle} className={styles.button} disabled={narration.status === 'loading'} aria-label={narration.isPlaying ? 'Pause reading' : narration.status === 'loading' ? 'Preparing narration' : 'Play reading'}>
+              <button type="button" onClick={narration.toggle} className={styles.button} disabled={narration.status === 'loading'} aria-label={t(narration.isPlaying ? 'Pause reading' : narration.status === 'loading' ? 'Preparing narration' : 'Play reading')}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={narration.status === 'loading' ? styles.voiceSpinner : undefined}>
                   {narration.status === 'loading'
                     ? <circle cx="12" cy="12" r="7" strokeDasharray="28 16" />
@@ -379,30 +277,41 @@ export default function ResultsPage() {
                       : <path d="m9 5 10 7-10 7Z" />}
                 </svg>
               </button>
-              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.next} disabled={!narration.canNext} aria-label="Next card">
+              <button type="button" className={`${styles.button} ${styles.skipButton}`} onClick={narration.next} disabled={!narration.canNext} aria-label={t("Next card")}>
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m10 7 5 5-5 5" /></svg>
               </button>
               </div>
-              {narration.status === 'error' && <p className={styles.audioHint}>The oracle’s voice is resting.</p>}
+              {narration.status === 'error' && <p className={styles.audioHint}>{t("The oracle’s voice is resting.")}</p>}
             </>}
-            <div className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
-            {availability ? <p>{availability}</p> : segments.map((segment, index) => (
+            </motion.div>
+          </div>
+
+          <div className={styles.predictionSection}>
+            <motion.div className={styles.readingContent} inert={selectedCardIndex !== null ? '' : undefined} aria-hidden={selectedCardIndex !== null}
+              animate={{ y: selectedCardIndex !== null ? 220 : 0, opacity: selectedCardIndex !== null ? 0 : 1 }}
+              transition={{ duration: reducedMotion ? 0 : isDesktop ? .95 : .6, ease: [.22, 1, .36, 1] }}>
+            <div ref={readingRef} className={availability ? styles.availabilityMessage : styles.predictionTextContainer} role={availability ? 'status' : undefined}>
+            {availability ? <p>{t(availability)}</p> : segments.map((segment, index) => (
               <p key={index} className={styles.predictionText} data-speaking={narration.activeCard === segment.cardIndex}>{segment.text}</p>
             ))}
           </div>
             </motion.div>
             <AnimatePresence>
-              {selectedCardIndex !== null && <motion.section key="card-explanation" className={styles.cardDetails} style={{ top: focusGeometry.detailsTop }}
+              {selectedCardIndex !== null && <motion.section key="card-explanation" className={styles.cardDetails} style={{ '--card-details-top': `${focusGeometry.detailsTop}px` }}
                 ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="card-explanation-title" tabIndex={-1}
                 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 32 }}
                 transition={{ duration: reducedMotion ? 0 : .55, delay: reducedMotion ? 0 : .16, ease: [.22, 1, .36, 1] }}>
-                <h2 id="card-explanation-title" className={styles.detailTitle}>{cardNames[parsedCards[selectedCardIndex]]}</h2>
-                <p className={styles.cardDescription}>{cardDescriptions[parsedCards[selectedCardIndex]]}</p>
+                <h2 id="card-explanation-title" className={styles.detailTitle}>{cardTranslation.error ? t("Card {n}", { n: selectedNumber }) : cardTranslation.texts[0]}</h2>
+                <p className={styles.cardDescription}>{cardTranslation.error ? t('Translation unavailable. Please try again.') : cardTranslation.texts[1]}</p>
+                {cardTranslation.error && <button className={wizardStyles.action} onClick={cardTranslation.retry}>{t('Try again')}</button>}
               </motion.section>}
             </AnimatePresence>
           </div>
 
-          <PageAction disabled={selectedCardIndex !== null} onClick={() => router.push('/')}>Ask another question</PageAction>
+          <footer className={styles.resultActions} aria-hidden={selectedCardIndex !== null}>
+            <button type="button" className={wizardStyles.action} disabled={selectedCardIndex !== null}
+              onClick={() => router.push('/')}>{t("Start over")}</button>
+          </footer>
     </div>
   );
 }

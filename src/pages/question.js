@@ -1,16 +1,18 @@
+import { useLanguage } from '@/context/Language';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import { validateQuestionInput } from '@/lib/tarotValidation.mjs';
-import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED } from '@/lib/oracleAvailability.mjs';
 import styles from '@/styles/question.module.css';
 
 export default function QuestionPage() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [question, setQuestion] = useState('');
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
   const inputRef = useRef(null);
+  const attemptRef = useRef(null);
   useEffect(() => { inputRef.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
     let active = true;
@@ -36,30 +38,31 @@ export default function QuestionPage() {
     const result = validateQuestionInput(question);
     if (!result.ok) { setError(result.error); inputRef.current?.focus(); return; }
     setChecking(true); setError('');
+    const fingerprint = JSON.stringify([result.question, router.query.adjectives, language]);
+    if (attemptRef.current?.fingerprint !== fingerprint) attemptRef.current = { fingerprint, id: result.question === router.query.question && router.query.processId ? router.query.processId : crypto.randomUUID() };
+    const processId = attemptRef.current.id;
     const continueToCards = oracleStatus => router.push({ pathname: '/cards', query: {
-      question: result.question, adjectives: router.query.adjectives,
+      question: result.question, adjectives: router.query.adjectives, processId,
       ...(oracleStatus ? { oracleStatus } : {}),
     } });
     try {
-      const response = await fetch('/api/validate-question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: result.question }) });
-      if (response.status >= 500 || response.status === 429) {
-        const data = await response.json().catch(() => ({}));
-        await continueToCards(data.code === ORACLE_CREDITS_EXHAUSTED ? ORACLE_CREDITS_EXHAUSTED : ORACLE_UNAVAILABLE);
-        return;
-      }
+      let adjectives;
+      try { adjectives = JSON.parse(router.query.adjectives || '[]'); } catch { adjectives = []; }
+      const response = await fetch('/api/validate-question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: result.question, adjectives, language, processId }) });
+      if (response.status === 429) { const data = await response.json(); setError(data.error); return; }
       const data = await response.json();
       if (!response.ok || data.valid !== true) { setError(data.error || 'Please ask a question for a tarot reading.'); return; }
       await continueToCards();
-    } catch { await continueToCards(ORACLE_UNAVAILABLE); }
-    finally { setChecking(false); }
+    } catch { setError('Access verification is temporarily unavailable. Please try again.'); }
+    finally { setChecking(false); window.dispatchEvent(new Event('oracle-usage-changed')); }
   };
 
   return (
-    <WizardLayout back={{ pathname: '/prequestion', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(question ? { question } : {}) } }} action={<PageAction disabled={!question.trim() || checking} onClick={submit}>{checking ? 'Checking…' : 'Confirm'}</PageAction>}>
-      <h1 className={styles.title}>What is your question?</h1>
+    <WizardLayout back={{ pathname: '/prequestion', query: { ...(router.query.adjectives ? { adjectives: router.query.adjectives } : {}), ...(question ? { question } : {}) } }} action={<PageAction disabled={!question.trim() || checking} onClick={submit}>{t(checking ? 'Checking…' : 'Confirm')}</PageAction>}>
+      <h1 className={styles.title}>{t("What is your question?")}</h1>
       <div className={styles.writingArea}>
-        <textarea data-autofocus ref={inputRef} aria-label="Your tarot question" aria-describedby={error ? 'question-error' : undefined} aria-invalid={!!error} value={question} maxLength={400} rows={1} className={styles.input} placeholder="Write your question…" onChange={event => { setQuestion(event.target.value); setError(''); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
-        {error && <p id="question-error" role="alert" className={styles.error}>{error}</p>}
+        <textarea data-autofocus ref={inputRef} aria-label={t("Your tarot question")} aria-describedby={error ? 'question-error' : undefined} aria-invalid={!!error} value={question} maxLength={400} rows={1} className={styles.input} placeholder={t("Write your question…")} onChange={event => { setQuestion(event.target.value); setError(''); }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
+        {error && <p id="question-error" role="alert" className={styles.error}>{t(error)}</p>}
       </div>
     </WizardLayout>
   );

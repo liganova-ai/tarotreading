@@ -13,13 +13,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
       await page.goto(`${process.env.DECK_TEST_URL || 'http://127.0.0.1:3000'}/results?${new URLSearchParams({ question: 'What should I focus on this week?', cards: '[1,2,3]', adjectives: '["Helper"]', oracleStatus: 'AI_UNAVAILABLE' })}`);
       const cards = page.locator('[class*="results_cardContainer"]');
       await cards.first().waitFor();
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(1400);
       await cards.first().evaluate(element => { window.__firstCard = element; });
       for (let index = 0; index < 3; index++) {
         await cards.nth(index).click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor();
-        await page.waitForTimeout(950);
+        await page.waitForTimeout(1350);
         const selected = await cards.nth(index).boundingBox();
         assert.ok(Math.abs(selected.x + selected.width / 2 - width / 2) < 2, 'Selected card must center horizontally');
         assert.ok(Math.abs(selected.y + selected.height / 2 - 842 / 2) < 2, 'Selected card must center vertically');
@@ -37,12 +37,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_PACKAGE_PATH || 'playwright'
         if (index === 0) await page.keyboard.press('Escape');
         if (index === 1) await page.getByRole('button', { name: 'Go back' }).click();
         if (index === 2) await page.locator('header h1').click();
-        await page.waitForTimeout(950);
+        await page.waitForTimeout(1350);
         assert.equal(await dialog.count(), 0);
         assert.equal(await cards.nth(index).getAttribute('aria-expanded'), 'false');
         assert.equal(await page.locator('[class*="results_readingContent"]').getAttribute('aria-hidden'), 'false');
         for (let other = 0; other < 3; other++) assert.equal(await cards.nth(other).evaluate(e => getComputedStyle(e).opacity), '1');
-        assert.equal(await page.getByRole('button', { name: 'Ask another question' }).isEnabled(), true);
+        assert.equal(await page.getByRole('button', { name: 'Start over' }).isEnabled(), true);
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     }

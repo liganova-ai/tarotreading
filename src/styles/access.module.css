@@ -1,0 +1,18 @@
+.title { font: 200 clamp(32px, 8vw, 40px) var(--font-luxury); text-align: center; text-wrap: balance; }
+.form { position: absolute; left: 50%; top: var(--main-sphere-top); width: var(--main-sphere-size); height: var(--main-sphere-size); transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; }
+.label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.passwordField { position: relative; width: min(80%, 360px); }
+.input { width: 100%; padding: 16px 12px; border: 0; border-radius: 0; outline: none; background: transparent; color: white; caret-color: white; text-align: center; font: italic clamp(13.5px, 1.8vw, 18px) var(--font-sabon); }
+.input:focus, .input:focus-visible { border: 0; outline: none; box-shadow: none; }
+.input::-ms-reveal { display: none; }
+.reveal { position: absolute; left: 50%; top: calc(50% + var(--main-sphere-size) * .25); transform: translate(-50%, -50%); display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: #ffffff70; cursor: pointer; transition: color .3s ease, filter .3s ease; }
+.reveal:hover, .reveal:focus-visible { color: white; box-shadow: none !important; }
+.reveal:focus-visible { outline: none; }
+.reveal:focus-visible svg { filter: drop-shadow(0 0 4px #ffffffb3); }
+.input::placeholder { color: #ffffff80; }
+.error { position: absolute; top: calc(100% + 8px); width: min(90vw, 360px); min-height: 44px; text-align: center; font: italic 16px var(--font-sabon); color: #dedede; }
+
+.maskedInput { color: transparent; -webkit-text-fill-color: transparent; font-family: monospace; font-size: 15px; letter-spacing: 3px; }
+.passwordDots { position: absolute; inset: 0 12px; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; pointer-events: none; }
+.dotTrack { display: flex; align-items: center; justify-content: center; gap: 3px; min-width: 100%; width: max-content; flex-shrink: 0; margin-left: auto; color: #ffffffa6; }
+.dotTrack svg { width: 9px; height: 12px; flex-shrink: 0; }

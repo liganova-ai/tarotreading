@@ -52,3 +52,12 @@ button:not(:disabled):active, a[class]:active { opacity: .78; }
     color-scheme: dark;
   }
 }
+
+.app-shell { --main-sphere-size: min(90vw, 684px, 41.86svh); --main-sphere-top: calc(50svh - min(5vw, 38px, 2.326svh)); }
+@media (min-aspect-ratio: 4/3) {
+  .app-shell { --main-sphere-size: min(38vw, 48svh, 640px); --main-sphere-top: 45svh; }
+}
+
+@media (min-aspect-ratio: 4/3) and (max-height: 360px) {
+  .app-shell { --main-sphere-size: min(38vw, 32svh, 640px); --main-sphere-top: 42svh; }
+}

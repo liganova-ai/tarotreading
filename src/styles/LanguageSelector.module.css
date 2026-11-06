@@ -1,0 +1,14 @@
+.selector { position: fixed; top: 40px; right: 24px; z-index: 10; color: #ffffffb8; font: 14px var(--font-sabon); }
+.trigger { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px; border: 1px solid #ffffff26; border-radius: 24px; background: #ffffff08; color: inherit; font: inherit; cursor: pointer; backdrop-filter: blur(16px); }
+.trigger:hover, .trigger[aria-expanded='true'] { border-color: #ffffff59; background: #ffffff0f; color: #fff; }
+.chevron { transition: transform .2s ease; }
+.chevron[data-open='true'] { transform: rotate(180deg); }
+.menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 180px; padding: 6px; border: 1px solid #ffffff30; border-radius: 18px; background: linear-gradient(145deg, #242424ed, #101010f5); backdrop-filter: blur(24px); box-shadow: 0 12px 40px #0008, inset 0 1px 0 #ffffff12; animation: appear .18s ease both; }
+.option { display: flex; align-items: center; width: 100%; min-height: 42px; padding: 10px; border: 0; border-radius: 12px; background: transparent; color: #ffffffb8; font: inherit; text-align: left; cursor: pointer; }
+.option[aria-selected='true'] { color: #fff; background: #ffffff12; }
+.option:hover, .option:focus-visible { color: #fff; background: #ffffff1c; outline: 1px solid #ffffff40; outline-offset: -1px; box-shadow: none; }
+.mark { width: 22px; flex-shrink: 0; }
+@keyframes appear { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-height: 700px) { .selector { top: 24px; } }
+@media (max-width: 480px) { .selector { right: 12px; font-size: 13px; } .trigger { gap: 8px; } }
+@media (prefers-reduced-motion: reduce) { .menu { animation: none; } .chevron { transition: none; } }

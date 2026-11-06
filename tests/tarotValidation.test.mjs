@@ -22,7 +22,7 @@ test('gate only accepts an explicit boolean approval and keeps input out of inst
   const client = { responses: { create: async body => { request = body; return { status: 'completed', output_text: '{"allowed":true}' }; } } };
   assert.equal(await isTarotQuestion(client, valid.question), true);
   assert.equal(request.model, TAROT_MODEL);
-  assert.equal('max_output_tokens' in request, false);
+  assert.equal(request.max_output_tokens, 128);
   assert.equal(request.reasoning.effort, 'none');
   assert.equal(JSON.parse(request.input).question, valid.question);
   assert.equal(request.instructions.includes(valid.question), false);

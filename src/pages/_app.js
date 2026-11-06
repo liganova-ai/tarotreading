@@ -1,3 +1,9 @@
+import NextApp from 'next/app';
+import { clearLegacyReadings } from '@/lib/privateFlow.mjs';
+import LogoutControl from '@/components/LogoutControl';
+import Head from 'next/head';
+import { LanguageProvider } from '@/context/Language';
+import LanguageSelector from '@/components/LanguageSelector';
 import { disposePreparedReadingAudio } from '@/lib/readingAudio';
 import "@/styles/globals.css";
 import localFont from 'next/font/local';
@@ -5,24 +11,45 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import OracleScene from '@/components/OracleScene';
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 // Next must retain outgoing step styles until AnimatePresence finishes exiting.
 import '@/styles/Home.module.css';
 import '@/styles/Wizard.module.css';
 import '@/styles/BackControl.module.css';
+import '@/styles/GlassDot.module.css';
 import '@/styles/disclaimer.module.css';
 import '@/styles/prequestion.module.css';
 import '@/styles/question.module.css';
 import '@/styles/cards.module.css';
 import '@/styles/results.module.css';
+import '@/styles/access.module.css';
 
 
 
-export default function App({ Component, pageProps }) {
+export default function App(props) {
+  return <LanguageProvider><Head><title>The Oracle – Look into the future</title></Head><OracleApp {...props} /></LanguageProvider>;
+}
+// Per-request rendering gives every executable Next script its own CSP nonce.
+App.getInitialProps = async context => NextApp.getInitialProps(context);
+
+function OracleApp({ Component, pageProps }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const [fontsReady, setFontsReady] = useState(false);
+  const [navigation, setNavigation] = useState({ path: router.pathname, from: null });
+  if (navigation.path !== router.pathname) {
+    setNavigation({ path: router.pathname, from: navigation.path });
+  }
+  // The scenery exits after a 1.1s pause, then moves for .95s and fades.
+  // Account for the outgoing page's .24s fade before revealing the disclaimer.
+  const entranceDelay = !reducedMotion && router.pathname === '/disclaimer'
+    && ['/', '/access'].includes(navigation.from) ? 1.95 : 0;
+
+  useEffect(() => {
+    try { clearLegacyReadings(window.localStorage); clearLegacyReadings(window.sessionStorage); } catch {}
+    const restore = event => { if (event.persisted) window.location.reload(); };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -37,16 +64,14 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    ['/disclaimer', '/prequestion', '/question', '/cards', '/results'].forEach(path => router.prefetch(path));
-  }, [router]);
-
-  useEffect(() => {
     if (router.pathname !== '/results') disposePreparedReadingAudio();
   }, [router.pathname]);
 
   return (
     <main className={`app-shell ${luxury.variable} ${sabon.variable}`} data-fonts-ready={fontsReady}>
       <OracleScene pathname={router.pathname} />
+      {!['/', '/access'].includes(router.pathname) && <LogoutControl />}
+      {router.pathname === '/' && <LanguageSelector />}
       <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
         <motion.div
           className="page-content"
@@ -56,9 +81,9 @@ export default function App({ Component, pageProps }) {
           exit={{
             opacity: reducedMotion ? 1 : 0,
             y: reducedMotion ? 0 : -8,
-            transition: { duration: reducedMotion ? 0 : router.pathname === '/' ? 2.05 : .24 },
+            transition: { duration: reducedMotion ? 0 : .24 },
           }}
-          transition={{ duration: reducedMotion ? 0 : .32, ease: [.22, 1, .36, 1] }}
+          transition={{ delay: entranceDelay, duration: reducedMotion ? 0 : .32, ease: [.22, 1, .36, 1] }}
           onAnimationComplete={definition => {
             if (definition.opacity !== 1) return;
             const target = document.querySelector('.page-content [data-autofocus]') || document.querySelector('.page-content h1');
