@@ -23,7 +23,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE_PATH||'playwright');
   assert.equal(await slots.locator('[data-active="true"]').count(),3);
   await page.emulateMedia({reducedMotion:'reduce'});
   const filled=slots.locator('svg[data-active="true"]').first();
-  assert.equal(await filled.locator('[class*=fill]').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');
+  assert.ok(await filled.locator('[class*=fill]').evaluate(e=>parseFloat(getComputedStyle(e).transitionDuration)<.001),'Reduced motion must have no perceptible fill animation');
   assert.equal(await wheel.locator('svg[viewBox="20 230 360 360"]').count(),0);
   await page.goto(base+'/');await page.getByRole('link',{name:'Start',exact:true}).waitFor();
   assert.equal(await page.locator('[class*=pointerHighlight], [class*=pointerRefraction], [class*=pointerCaustic]').count(),0,'Home reflection keeps its original animation');

@@ -1,7 +1,8 @@
 import { useLanguage } from '@/context/Language';
+import PersonalityDroplet from '@/components/PersonalityDroplet';
 import GlassDot from '@/components/GlassDot';
 import { useRouter } from 'next/router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import { PERSONALITIES } from '@/lib/tarotValidation.mjs';
@@ -13,9 +14,6 @@ const slots = SLOT_ANGLES.map(angle => ({
   y: 50 + Math.sin(angle * Math.PI / 180) * SLOT_RADIUS,
 }));
 
-const dropCircle = 'M-12 0C-12-6.6-6.6-12 0-12C6.6-12 12-6.6 12 0C12 6.6 6.6 12 0 12C-6.6 12-12 6.6-12 0Z';
-const dropShape = 'M-24 0C-14-1-6-10 3-10C11-10 16-6 16 0C16 6 11 10 3 10C-6 10-14 1-24 0Z';
-
 export default function Prequestion() {
   const { t } = useLanguage();
   const router = useRouter();
@@ -26,6 +24,7 @@ export default function Prequestion() {
   const rotationControls = useAnimationControls();
   const rotation = useRef(0);
   const [travelId, setTravelId] = useState(null);
+  const finishFlight = useCallback(id => setFlights(previous => previous.filter(flight => flight.id !== id)), []);
   const activeFlight = flights[0];
   const activeSlotIndex = activeFlight ? selected.indexOf(activeFlight.personality) : -1;
 
@@ -106,24 +105,7 @@ export default function Prequestion() {
           const slotIndex = selected.indexOf(flight.personality);
           if (slotIndex < 0) return null;
           const { destination } = alignPersonalitySlot(flight, slotIndex, rotation.current);
-          const dx = destination.x - flight.x, dy = destination.y - flight.y;
-          const distance = Math.hypot(dx, dy);
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-          const gradientId = `personality-drop-${flight.id}`;
-          return <motion.div key={flight.id} className={styles.flyingDrop} aria-hidden="true"
-            initial={{ left: `${flight.x + dx / distance * 10.5}%`, top: `${flight.y + dy / distance * 10.5}%`, x: '-50%', y: '-50%', rotate: angle, scale: .8, opacity: 0 }}
-            animate={{ left: `${destination.x}%`, top: `${destination.y}%`, rotate: angle, scale: [.8, 1, .8, .71875], opacity: [0, 1, 1, 1] }}
-            transition={{ duration: .75, ease: [.45, 0, .2, 1], times: [0, .2, .8, 1] }}
-            onAnimationComplete={() => setFlights(previous => previous.filter(item => item.id !== flight.id))}>
-            <svg viewBox="-30 -30 60 60" fill="none" focusable="false">
-              <defs><linearGradient id={gradientId} x1={slotIndex === 1 ? -12.5217 : 10.4348} y1="-12.5217" x2="-8.3478" y2="13.5652" gradientUnits="userSpaceOnUse" gradientTransform={`rotate(${rotation.current - angle})`}>
-                <stop stopColor="#fff" /><stop offset=".4" stopColor="#aaa" /><stop offset=".65" stopColor="#333" /><stop offset="1" stopColor="#eee" />
-              </linearGradient></defs>
-              <motion.path fill={`url(#${gradientId})`} initial={{ d: dropCircle }}
-                animate={{ d: [dropCircle, dropShape, dropShape, dropCircle] }}
-                transition={{ duration: .75, times: [0, .25, .7, 1], ease: 'easeInOut' }} />
-            </svg>
-          </motion.div>;
+          return <PersonalityDroplet key={flight.id} flight={flight} destination={destination} slotIndex={slotIndex} rotation={rotation.current} onArrival={finishFlight} />;
         })}
       </div>
       </div>
