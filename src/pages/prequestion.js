@@ -1,7 +1,7 @@
 import { useLanguage } from '@/context/Language';
 import PersonalityDroplet from '@/components/PersonalityDroplet';
 import GlassDot from '@/components/GlassDot';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useAnimationControls, useReducedMotion } from 'framer-motion';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';

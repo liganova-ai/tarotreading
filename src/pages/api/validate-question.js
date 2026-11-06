@@ -1,3 +1,4 @@
+import { reserveUsage } from '@/lib/oracleSecurity.mjs';
 import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { oracleFailureCode, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
 import { getOpenAI } from '@/lib/openai';
@@ -12,6 +13,7 @@ export default async function handler(req, res) {
   const input = validateQuestionInput(req.body?.question);
   if (!input.ok) return res.status(400).json({ error: input.error });
   try {
+    if (!await reserveUsage(req, res, 'validate-question')) return;
     if (!await isTarotQuestion(getOpenAI(), input.question)) return res.status(400).json({ error: QUESTION_ERROR });
     return res.status(200).json({ valid: true });
   } catch (error) {

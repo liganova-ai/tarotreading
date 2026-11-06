@@ -38,6 +38,7 @@ export function validateReadingInput(body) {
 export async function structuredReply(client, instructions, input, name, properties) {
   const response = await client.responses.create({
     model: TAROT_MODEL,
+    max_output_tokens: name === 'tarot_question_gate' ? 128 : name === 'tarot_reading' ? 900 : 3000,
     reasoning: { effort: 'none' },
     instructions,
     input: JSON.stringify(input),

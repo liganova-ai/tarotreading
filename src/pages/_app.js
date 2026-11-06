@@ -1,3 +1,6 @@
+import NextApp from 'next/app';
+import { clearLegacyReadings } from '@/lib/privateFlow.mjs';
+import LogoutControl from '@/components/LogoutControl';
 import Head from 'next/head';
 import { LanguageProvider } from '@/context/Language';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -8,8 +11,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import OracleScene from '@/components/OracleScene';
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 // Next must retain outgoing step styles until AnimatePresence finishes exiting.
 import '@/styles/Home.module.css';
 import '@/styles/Wizard.module.css';
@@ -27,6 +28,9 @@ import '@/styles/access.module.css';
 export default function App(props) {
   return <LanguageProvider><Head><title>The Oracle – Look into the future</title></Head><OracleApp {...props} /></LanguageProvider>;
 }
+// Per-request rendering gives every executable Next script its own CSP nonce.
+App.getInitialProps = async context => NextApp.getInitialProps(context);
+
 function OracleApp({ Component, pageProps }) {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
@@ -41,6 +45,13 @@ function OracleApp({ Component, pageProps }) {
     && ['/', '/access'].includes(navigation.from) ? 1.95 : 0;
 
   useEffect(() => {
+    try { clearLegacyReadings(window.localStorage); clearLegacyReadings(window.sessionStorage); } catch {}
+    const restore = event => { if (event.persisted) window.location.reload(); };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     // Warm every face used by the wizard before revealing its first page.
     Promise.allSettled([
@@ -53,16 +64,13 @@ function OracleApp({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    ['/disclaimer'].forEach(path => router.prefetch(path));
-  }, [router]);
-
-  useEffect(() => {
     if (router.pathname !== '/results') disposePreparedReadingAudio();
   }, [router.pathname]);
 
   return (
     <main className={`app-shell ${luxury.variable} ${sabon.variable}`} data-fonts-ready={fontsReady}>
       <OracleScene pathname={router.pathname} />
+      {!['/', '/access'].includes(router.pathname) && <LogoutControl />}
       {router.pathname === '/' && <LanguageSelector />}
       <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
         <motion.div

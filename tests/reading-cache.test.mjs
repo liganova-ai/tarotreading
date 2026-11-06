@@ -29,16 +29,17 @@ test('navigation during generation shares the pending request; failures can retr
   await assert.rejects(getOrCreateReading(retryInput, async () => { throw new Error('Offline'); }));
   assert.equal((await getOrCreateReading(retryInput, async () => result)).prediction, result.prediction);
 });
-test('saved reading reloads from browser storage with original cards', async () => {
+test('readings stay in memory and do not survive a fresh tab module', async () => {
   const storage = new Map();
-  globalThis.window = { localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } };
+  globalThis.window = { localStorage: { getItem: key => storage.get(key), setItem: () => { throw new Error('Private readings must not be persisted'); } } };
   try {
-    const input = { question: 'A persistent question?', cards: [7, 8, 9] };
+    const input = { question: 'A private question?', cards: [7, 8, 9] };
     await getOrCreateReading(input, async () => result);
-    const fresh = await import('../src/lib/readingCache.mjs?reload');
-    const saved = await fresh.getOrCreateReading(input, () => { throw new Error('Must not regenerate'); });
-    assert.deepEqual(saved.cards, input.cards);
-    assert.equal(saved.prediction, result.prediction);
+    const fresh = await import('../src/lib/readingCache.mjs?private-reload');
+    let calls = 0;
+    await fresh.getOrCreateReading(input, async () => { calls++; return result; });
+    assert.equal(calls, 1);
+    assert.equal(storage.size, 0);
   } finally { delete globalThis.window; }
 });
 test('switching language translates a saved reading without generating a new interpretation', async () => {

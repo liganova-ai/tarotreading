@@ -1,3 +1,4 @@
+import { reserveUsage } from '@/lib/oracleSecurity.mjs';
 import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { LANGUAGE_NAMES, isLanguage } from '@/lib/languages.mjs';
 import { normalizeReadingSegments, READING_SEGMENTS_SCHEMA } from '@/lib/readingSegments.mjs';
@@ -104,6 +105,7 @@ export default async function handler(req, res) {
   const input = validateReadingInput(req.body);
   if (!input.ok) return res.status(400).json({ error: input.error });
   try {
+    if (!await reserveUsage(req, res, 'predict')) return;
     const client = getOpenAI();
     // Always re-check here: a client can skip the question page entirely.
     if (!await isTarotQuestion(client, input.question)) return res.status(400).json({ error: QUESTION_ERROR });

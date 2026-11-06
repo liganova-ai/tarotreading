@@ -1,6 +1,6 @@
 import { useLanguage } from '@/context/Language';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import { validateQuestionInput } from '@/lib/tarotValidation.mjs';
 import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED } from '@/lib/oracleAvailability.mjs';
@@ -44,7 +44,8 @@ export default function QuestionPage() {
     } });
     try {
       const response = await fetch('/api/validate-question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: result.question }) });
-      if (response.status >= 500 || response.status === 429) {
+      if (response.status === 429) { const data = await response.json(); setError(data.error); return; }
+      if (response.status >= 500) {
         const data = await response.json().catch(() => ({}));
         await continueToCards(data.code === ORACLE_CREDITS_EXHAUSTED ? ORACLE_CREDITS_EXHAUSTED : ORACLE_UNAVAILABLE);
         return;

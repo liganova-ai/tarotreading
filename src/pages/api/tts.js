@@ -1,3 +1,4 @@
+import { reserveUsage } from '@/lib/oracleSecurity.mjs';
 import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { getOpenAI } from '@/lib/openai';
 
@@ -10,6 +11,7 @@ export default async function handler(req, res) {
   const text = req.body?.text;
   if (typeof text !== 'string' || !text.trim() || text.length > 4096) return res.status(400).json({ error: 'Please provide a reading to narrate.' });
   try {
+    if (!await reserveUsage(req, res, 'tts')) return;
     const audio = await getOpenAI().audio.speech.create({ model: 'tts-1', voice: 'alloy', input: text });
     res.setHeader('Content-Type', 'audio/mpeg');
     return res.status(200).send(Buffer.from(await audio.arrayBuffer()));

@@ -38,3 +38,35 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+## Production security
+
+The deployment requires `OPENAI_API_KEY`, `ORACLE_PASSWORD`, a randomly generated
+`ORACLE_SESSION_SECRET` (at least 43 characters), and Redis REST credentials
+(`KV_REST_API_URL`/`KV_REST_API_TOKEN`, or the equivalent `UPSTASH_REDIS_REST_*`).
+Keep them server-only. Authentication and paid operations fail closed if Redis
+or the signing configuration is unavailable. Local development also needs Redis;
+production never falls back to memory for quotas or revocation.
+
+Sessions expire after two hours. Sign out revokes the session in Redis; changing
+the shared password invalidates existing sessions. Every paid operation rechecks
+authentication inside its API handler. Mutations require same-origin JSON.
+
+Default atomic limits are five login attempts per IP per 15 minutes, 500 login
+attempts globally per 15 minutes, and global daily limits of 100 readings,
+300 question checks, 200 translations, and 500 narration segments. Each two-hour
+session is additionally limited to 10 readings, 30 question checks, 20 translations,
+and 40 narration segments. A shared weighted daily budget and per-IP hourly
+budget provide additional bounds. These limits live in `src/lib/oracleSecurity.mjs`;
+they cap request volume rather than guaranteeing a particular dollar spend.
+OpenAI responses also have output-token caps and automatic retries are disabled.
+
+Redis stores expiring counters, random session IDs, and HMACs of IPs/password
+versions, not questions, readings, plaintext passwords, or API keys. Development,
+preview and production namespaces are separate. Tests can choose an isolated
+`ORACLE_SECURITY_NAMESPACE`; clients cannot change it.
+
+Questions and readings stay in tab memory. They do not appear in navigation URLs
+or persist in localStorage; refreshing deliberately restarts the private flow.
+The app removes caches left by older versions. Production pages use a per-request
+CSP nonce, no-store caching, anti-framing headers and a no-referrer policy.

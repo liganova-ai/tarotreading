@@ -7,10 +7,9 @@ import GlassDot from '@/components/GlassDot';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { disposePreparedReadingAudio, ensurePreparedReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
 import { getSavedReading, getOrCreateReading } from '@/lib/readingCache.mjs';
 import useNarration from '@/hooks/useNarration';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import BackControl from '@/components/BackControl';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import { ORACLE_UNAVAILABLE, ORACLE_CREDITS_EXHAUSTED, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
@@ -256,9 +255,8 @@ export default function ResultsPage() {
   }, [isDesktop, readingVisible, prediction]);
 
   useEffect(() => {
-    if (!router.isReady || !languageReady || !question || !cards || !adjectives) {
-      return;
-    }
+    if (!router.isReady || !languageReady) return;
+    if (!question || !cards || !adjectives) { router.replace('/prequestion'); return; }
 
     let active = true;
     const applyReading = reading => {
@@ -293,13 +291,15 @@ export default function ResultsPage() {
     }
     setLoading(true);
     getOrCreateReading({ question, language, cards: parseArray(cards), adjectives: parsedAdjectives }, async payload => {
-      const response = await axios.post('/api/predict', payload);
-      return response.data;
+      const response = await fetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await response.json();
+      if (!response.ok) throw Object.assign(new Error(data.error || 'Reading unavailable.'), { response: { status: response.status, data } });
+      return data;
     }).then(applyReading).catch(err => {
       if (!active) return;
       if (getSavedReading(question)) {
         setError('Translation unavailable. Please try again.');
-      } else if (!err.response || err.response.status >= 500 || err.response.status === 429) {
+      } else if (!err.response || err.response.status >= 500) {
         setAvailability(oracleAvailabilityMessage(err.response?.data?.code));
       } else {
         setError(err.response?.data?.error || 'Please ask a question for a tarot reading.');

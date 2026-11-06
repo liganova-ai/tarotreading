@@ -2,7 +2,7 @@ import { useLanguage } from '@/context/Language';
 import GlassDot from '@/components/GlassDot';
 import { prepareReadingAudio } from '@/lib/readingAudio';
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/router';
+import useRouter from '@/hooks/usePrivateRouter';
 import WizardLayout, { PageAction } from '@/components/WizardLayout';
 import styles from '@/styles/cards.module.css';
 
@@ -127,6 +127,8 @@ export default function CardsPage() {
       }
     } catch {}
   }, [router.isReady, router.query.cards]);
+
+  useEffect(() => { if (router.isReady && !router.query.question) router.replace('/question'); }, [router.isReady, router.query.question]);
 
   const select = card => {
     if (interaction.current.moved) return;

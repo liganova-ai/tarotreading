@@ -5,12 +5,7 @@ export function savedTranslation(texts, language) {
   if (language === 'en') return texts;
   const key = keyFor(texts, language);
   if (memory.has(key)) return memory.get(key);
-  try {
-    const saved = JSON.parse(localStorage.getItem(key));
-    if (Array.isArray(saved) && saved.length === texts.length && saved.every(text => typeof text === 'string')) {
-      memory.set(key, saved); return saved;
-    }
-  } catch {}
+
   return null;
 }
 export function translateTexts(texts, language, fromEnglish = false) {
@@ -24,7 +19,6 @@ export function translateTexts(texts, language, fromEnglish = false) {
       const result = await response.json();
       if (!Array.isArray(result.texts) || result.texts.length !== texts.length || result.texts.some(text => typeof text !== 'string' || !text.trim())) throw new Error('Invalid translation');
       memory.set(key, result.texts);
-      try { localStorage.setItem(key, JSON.stringify(result.texts)); } catch {}
       return result.texts;
     }).finally(() => pending.delete(key));
   pending.set(key, promise);
