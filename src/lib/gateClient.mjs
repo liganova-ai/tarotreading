@@ -4,6 +4,7 @@ export class GateError extends Error {
   }
 }
 const messages = {
+  VALIDATION: 'Please enter your access code exactly as it was issued.',
   INVALID_ACCESS: 'This access code is invalid for Oracle.',
   EXPIRED: 'Your access has expired. Please enter a new code.',
   REVOKED: 'This access code has been revoked.',

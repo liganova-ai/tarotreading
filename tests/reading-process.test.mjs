@@ -86,6 +86,7 @@ test('Gate transport validates summaries, keeps credentials server-side and fail
     await assert.rejects(gateCall('status',{},async()=>{throw new Error('offline')}),{code:'GATE_UNAVAILABLE'});
     await assert.rejects(gateCall('status',{},async()=>({ok:true,json:async()=>({...summary,remaining:20})})),{code:'GATE_UNAVAILABLE'});
     await assert.rejects(gateCall('consume',{},async()=>({ok:false,status:403,json:async()=>({error:'QUOTA_EXHAUSTED'})})),{code:'QUOTA_EXHAUSTED'});
+    await assert.rejects(gateCall('activate',{code:'typo'},async()=>({ok:false,status:400,json:async()=>({error:'VALIDATION'})})),{code:'VALIDATION',status:400});
     delete process.env.GATE_APP_KEY;await assert.rejects(gateCall('status',{},()=>assert.fail('No request without key')));
   }finally{for(const key of Object.keys(process.env))if(!(key in original))delete process.env[key];Object.assign(process.env,original)}
 });
