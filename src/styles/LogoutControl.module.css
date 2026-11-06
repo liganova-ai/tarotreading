@@ -5,3 +5,6 @@
 .allowance span { margin: 0; }
 @media (max-height: 700px) { .control { top: 24px; } }
 @media (max-width: 480px) { .control { right: 12px; } }
+@media (max-width: 760px) {
+  .allowance { position: fixed; top: 8px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 12px; margin: 0; font-size: 11px; line-height: 1.2; pointer-events: none; }
+}
