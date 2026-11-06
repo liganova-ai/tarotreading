@@ -1,8 +1,10 @@
+import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { getOpenAI } from '@/lib/openai';
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
 export default async function handler(req, res) {
+  if (!await requireOracleAccess(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
   const text = req.body?.text;

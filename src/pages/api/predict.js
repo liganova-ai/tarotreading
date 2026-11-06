@@ -1,3 +1,4 @@
+import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { LANGUAGE_NAMES, isLanguage } from '@/lib/languages.mjs';
 import { normalizeReadingSegments, READING_SEGMENTS_SCHEMA } from '@/lib/readingSegments.mjs';
 import { oracleFailureCode, oracleAvailabilityMessage } from '@/lib/oracleAvailability.mjs';
@@ -95,6 +96,7 @@ const traits = {
 export const config = { api: { bodyParser: { sizeLimit: '8kb' } } };
 
 export default async function handler(req, res) {
+  if (!await requireOracleAccess(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
   const language = req.body?.language ?? 'en';

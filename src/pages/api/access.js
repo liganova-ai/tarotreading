@@ -1,5 +1,5 @@
 import { timingSafeEqual, createHash } from 'node:crypto';
-import { ACCESS_COOKIE, ACCESS_DURATION, createAccessToken } from '@/lib/oracleAccess';
+import { ACCESS_COOKIE, ACCESS_DURATION, createAccessToken } from '@/lib/oracleAccess.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');

@@ -1,8 +1,10 @@
+import { requireOracleAccess } from '@/lib/requireOracleAccess.mjs';
 import { LANGUAGE_NAMES, isLanguage } from '@/lib/languages.mjs';
 import { structuredReply } from '@/lib/tarotValidation.mjs';
 import { getOpenAI } from '@/lib/openai';
 export const config = { api: { bodyParser: { sizeLimit: '16kb' } } };
 export default async function handler(req, res) {
+  if (!await requireOracleAccess(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).end(); }
   const { language, texts } = req.body || {};
